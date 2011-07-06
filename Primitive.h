@@ -247,7 +247,7 @@ public:
 		Math::Normalize( edgeTwo );
 
 		//Reusing edge.  Cross product will provide A,B,C coefficients.
-		output = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);
+		output = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
 
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
 		edgeOne = _mm_sub_ps(Math::zero,edgeOne);
@@ -255,12 +255,14 @@ public:
 		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );
 		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); //D is now in least significant word
 
-		edgeTwo = _mm_shuffle_ps(edgeTwo, edgeTwo, _MM_SHUFFLE(0, 0, 0, 0)); // { D, D, D, D };
+		edgeTwo = _mm_shuffle_ps(edgeTwo, Math::zero, _MM_SHUFFLE(3, 3, 3, 3)); // { D, D, D, D };
 		edgeTwo = _mm_mul_ps(Math::half, edgeTwo); // { D/2, D/2, 0 , 0 }
-		edgeOne = _mm_sub_ps(edgeOne, edgeTwo); // {-A-D/2,-B-D/2, -C, 0 } 0 = -Ax -By -Cz -D;
+		edgeTwo = _mm_shuffle_ps(edgeTwo, edgeTwo, _MM_SHUFFLE(0, 3, 0, 3)); // { 0, D/2, 0, D/2}
+		edgeOne = _mm_shuffle_ps(edgeOne, edgeOne, _MM_SHUFFLE(3, 1, 3, 0)); // { -A, 0, -B , 0 }
+		edgeOne = _mm_sub_ps(edgeOne, edgeTwo); // {-A,-D/2,-B,-D/2 } 0 = -Ax -By -Cz -D;
 		edgeTwo = _mm_shuffle_ps(output, output, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
 		
-		output = _mm_div_ps(edgeOne,edgeTwo); // 0 = { (-A - D/2)/C, (-B - D/2)/C, -1, 0 };
+		output = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - (D/2)/C, -B/C, - (D/2)/C};
 
 		//This would give you the correct plane.  However, I'm precomputing as much as possible beforehand.
 		//output = _mm_insert_ps(output,edgeTwo,_MM_MK_INSERTPS_NDX(0,3,0));
@@ -324,9 +326,10 @@ public:
 		Pixel<> pixel;
 		
 		//Interpolate z
-		ALIGN float loadCoords[4] = { (float)x, (float)y,  0.0f, 0.0f };
+		ALIGN float loadCoords[4] = { (float)x, 0.0f,  (float)y, 0.0f };
 		Math::Vector4 coords = Math::LoadVector4Aligned(loadCoords);
 		coords = _mm_mul_ps(coords,plane);
+		coords = _mm_hadd_ps(coords,coords);
 		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated z value
 		_mm_store_ss(&pixel.z, coords);
 		pixel.red = 50;
