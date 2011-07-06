@@ -1,0 +1,14 @@
+
+#ifndef ERROR_HANDLING_H_
+#define ERROR_HANDLING_H_
+
+enum RendererResult	:	unsigned int
+{
+	RENDERER_FATAL_ERROR = 1,
+	RENDERER_SUCCESS = 2,
+	RENDERER_MATRIX_CONSTRUCTION_FAILURE = 4,
+	RENDERER_PRIMITIVE_CLIPPED = 8,
+
+};
+
+#endif
