@@ -7,6 +7,7 @@
 #include "Vector.h"
 #include <stdio.h>
 #include "Debugging.h"
+#include "Mesh.h"
 
 SimpleEngine::SimpleEngine()	:	win(nullptr)
 {
@@ -21,7 +22,11 @@ void SimpleEngine::Initialize()
 	win = new Window();
 	win->Initialize();
 
-	VertexBuffer* v = new VertexBuffer(1);
+	Mesh m;
+
+	m.LoadMesh();
+
+	/*VertexBuffer* v = new VertexBuffer(1);
 	PrimitiveBase* triangle = new Primitive<>();
 	ALIGN float vert1[4] = { 0.0f, 0.01f, 0.01f, 1.0f };
 	((Primitive<>*)triangle)->AddVertex( Math::LoadVector4Aligned( vert1 ) );
@@ -29,9 +34,9 @@ void SimpleEngine::Initialize()
 	((Primitive<>*)triangle)->AddVertex( Math::LoadVector4Aligned( vert2 ) );
 	ALIGN float vert3[4] = { 0.01f, 1.0f, 0.02f, 1.0f };
 	((Primitive<>*)triangle)->AddVertex( Math::LoadVector4Aligned( vert3 ) );
-	v->FillBuffer(&triangle,1);
+	v->FillBuffer(&triangle,1);*/
 
-	RENDERER->SubmitVertexBuffer(v);
+	RENDERER->SubmitVertexBuffer(m.GetBuffer());
 }
 
 void SimpleEngine::Run()
