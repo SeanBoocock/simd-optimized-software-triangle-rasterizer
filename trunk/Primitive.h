@@ -238,6 +238,27 @@ public:
 		SetPixelBounds(minX,storeYMin[1],maxX,storeYMax[1]);
 	}
 
+	void GenerateBarycentric(Math::Vector4 &output)
+	{
+		/*
+		GzCoord barycentricCoord = {0.0,0.0,0.0};
+	float determinant = (vertices[0][0] - vertices[2][0])*(vertices[1][1] - vertices[2][1])
+		-(vertices[0][1] - vertices[2][1])*(vertices[1][0] - vertices[2][0]);
+
+	v[0].z * barycentricCoord[0] = ((vertices[1][1]-vertices[2][1])*(x - vertices[2][0])+(vertices[2][0]-vertices[1][0])*(y-vertices[2][1]))/determinant;
+	v[1].z * barycentricCoord[1] = ((vertices[2][1]-vertices[0][1])*(x - vertices[2][0])+(vertices[0][0]-vertices[2][0])*(y-vertices[2][1]))/determinant;
+	v[2].z * barycentricCoord[2] = 1 - barycentricCoord[0] - barycentricCoord[1];
+		*/
+		Math::Vector4 temp = _mm_sub_ps(vertices[0],vertices[2]);
+		Math::Vector4 temp1 = _mm_sub_ps(vertices[1],vertices[2]);
+		temp1 =  _mm_shuffle_ps(temp1, temp1, _MM_SHUFFLE(3, 3, 0, 1));
+		Math::Vector4 determinant = _mm_mul_ps(temp,temp1);
+		determinant = _mm_hsub_ps(determinant,determinant);//{determinant,0,determinant,0};
+
+		Math::Vector4 temp2 = _mm_sub_ps(vertices[2],vertices[0]);
+
+	}
+
 	void GenerateInterpolationPlane(Math::Vector4 &output)
 	{
 		//General plane equation: Ax + By + Cz + D = 0
@@ -250,22 +271,17 @@ public:
 		output = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
 
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
-		edgeOne = _mm_sub_ps(Math::zero,edgeOne);
-		edgeTwo = _mm_mul_ps( edgeOne, vertices[0] );
-		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );
-		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); //D is now in least significant word
+		edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
+		edgeTwo = _mm_mul_ps( edgeOne, vertices[0] ); // { -A*(x0), -B*(y0), -C*(z0), 0 }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
 
-		edgeTwo = _mm_shuffle_ps(edgeTwo, Math::zero, _MM_SHUFFLE(3, 3, 3, 3)); // { D, D, D, D };
-		edgeTwo = _mm_mul_ps(Math::half, edgeTwo); // { D/2, D/2, 0 , 0 }
-		edgeTwo = _mm_shuffle_ps(edgeTwo, edgeTwo, _MM_SHUFFLE(0, 3, 0, 3)); // { 0, D/2, 0, D/2}
+		edgeTwo = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
 		edgeOne = _mm_shuffle_ps(edgeOne, edgeOne, _MM_SHUFFLE(3, 1, 3, 0)); // { -A, 0, -B , 0 }
-		edgeOne = _mm_sub_ps(edgeOne, edgeTwo); // {-A,-D/2,-B,-D/2 } 0 = -Ax -By -Cz -D;
+		edgeOne = _mm_sub_ps(edgeOne, edgeTwo); // {-A,-D,-B,0 } 
 		edgeTwo = _mm_shuffle_ps(output, output, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
 		
-		output = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - (D/2)/C, -B/C, - (D/2)/C};
-
-		//This would give you the correct plane.  However, I'm precomputing as much as possible beforehand.
-		//output = _mm_insert_ps(output,edgeTwo,_MM_MK_INSERTPS_NDX(0,3,0));
+		output = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
 	}
 
 	void LEETest(FramebufferBase* buffer)
@@ -320,13 +336,14 @@ public:
 		}
 	}
 
-	void WriteBuffer(FramebufferBase* buffer, const Math::Vector4 plane, const unsigned int &x, const unsigned int &y)
+	void WriteBuffer(FramebufferBase* buffer, const Math::Vector4 &plane, const unsigned int &x, const unsigned int &y)
 	{
 		//in triangle or on line of one triangle
 		Pixel<> pixel;
-		
+		float testX = 320.485;
+		float testY = 239.83;
 		//Interpolate z
-		ALIGN float loadCoords[4] = { (float)x, 0.0f,  (float)y, 0.0f };
+		ALIGN float loadCoords[4] = { (float)testX, 1.0f,  (float)testY, 0.0f };
 		Math::Vector4 coords = Math::LoadVector4Aligned(loadCoords);
 		coords = _mm_mul_ps(coords,plane);
 		coords = _mm_hadd_ps(coords,coords);

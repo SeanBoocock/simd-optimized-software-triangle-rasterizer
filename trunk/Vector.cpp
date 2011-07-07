@@ -76,7 +76,7 @@ namespace Math
 	
 	inline Vector4 LoadVector4Aligned(const float* inArray)
 	{
-		return Vector4(_mm_load_ps(inArray));
+		return _mm_load_ps(inArray);
 	}
 
 	Vector4 operator+ (Vector4 in)	{	return in;	}

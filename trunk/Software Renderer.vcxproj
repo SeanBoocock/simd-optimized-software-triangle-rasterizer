@@ -71,6 +71,7 @@
     <ClInclude Include="MatrixMath.h" />
     <ClInclude Include="MatrixStack.h" />
     <ClInclude Include="MatrixStackBase.h" />
+    <ClInclude Include="Mesh.h" />
     <ClInclude Include="PipelineBase.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="Pixel.h" />
