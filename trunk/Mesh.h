@@ -21,7 +21,7 @@ public:
 		{
 			DEBUG_PRINT( "The input file was not opened\n" );
 		}
-		buffer = new VertexBuffer(500);
+		buffer = new VertexBuffer(1000);
 	}
 
 	void LoadMesh()
@@ -33,9 +33,12 @@ public:
 		vertexList[0][3] = 1.0f;
 		vertexList[1][3] = 1.0f;
 		vertexList[2][3] = 1.0f;
+		
+		Math::Vector4 rows[3];
 
+		
 		while( fscanf(inFile, "%s", dummy) == 1) 
-		{ 	/* read in tri word */
+		{ 	
 			fscanf(inFile, "%f %f %f %f %f %f %f %f", 
 			&(vertexList[0][0]), &(vertexList[0][1]),  
 			&(vertexList[0][2]), 
@@ -59,7 +62,7 @@ public:
 			rows[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
 			rows[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
 			rows[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
-			PrimitiveBase* toAdd = new Primitive<Math::Vector4,3>(rows);
+			PrimitiveBase* toAdd = new Primitive<>(rows);
 			buffer->PushBack(toAdd);
 		}
 	}

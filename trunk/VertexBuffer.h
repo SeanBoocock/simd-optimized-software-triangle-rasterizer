@@ -59,6 +59,11 @@ public:
 		return buffer;
 	}
 
+	void Reset()
+	{
+
+	}
+
 private:
 	unsigned int totalSize;
 	unsigned int currentSize;

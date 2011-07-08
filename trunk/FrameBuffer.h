@@ -8,7 +8,7 @@
 #include <vector>
 #include "Alignment.h"
 #include "Pixel.h"
-
+#include "Debugging.h"
 
 template<typename BufferOf = Pixel<Intensity,Depth>, typename ColorComponentDepth = Intensity, typename zDepth = Depth>
 class FrameBuffer	:	public FramebufferBase
@@ -73,7 +73,8 @@ public:
 	
 	FrameBuffer(unsigned int xDimension = DEFAULT_WIDTH,
 				unsigned int yDimension = DEFAULT_HEIGHT)	:	xDim(xDimension),
-																yDim(yDimension)
+																yDim(yDimension),
+																bufferToDisplay(nullptr)
 	{
 		buffer = new Pixel<Intensity,Depth>[bufferSize = xDim * yDim];
 		Reset();
@@ -99,8 +100,10 @@ public:
 
 	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y)
 	{
+		++pixelsPassedLEETest;
 		if( ((Pixel<Intensity,Depth>*)pixel)->z < buffer[ y * xDim + x ].z )
 		{
+			++pixelsPassedZTest;
 			buffer[ y * xDim + x ] = *((Pixel<Intensity,Depth>*)pixel);
 		}
 	}
@@ -108,14 +111,14 @@ public:
 	//PARALLEL: can use parallel for here ot do this
 	char* FlushBuffer()
 	{
-		char* bufferToReturn = new char[bufferSize * 3];
+		bufferToDisplay = new char[bufferSize * 3];
 		for(unsigned int i = 0, j = -1; i < bufferSize; ++i)
 		{
-			bufferToReturn[++j] = (char) (0xFFFFFFFF & buffer[i].red);
-			bufferToReturn[++j] = (char) (0xFFFFFFFF & buffer[i].green);
-			bufferToReturn[++j] = (char) (0xFFFFFFFF & buffer[i].blue);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].red);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].green);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].blue);
 		}
-		return bufferToReturn;
+		return bufferToDisplay;
 	}
 
 	unsigned int GetColorDepth()
@@ -139,6 +142,7 @@ private:
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;
+	char* bufferToDisplay;
 };
 
 #endif

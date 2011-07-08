@@ -4,6 +4,7 @@
 
 #include "MatrixMath.h"
 #include <math.h>
+#include "FramebufferBase.h"
 
 class Renderer;
 
