@@ -6,7 +6,7 @@
 #define DEFAULT_HEIGHT 480
 #define DEFAULT_WIDTHf 640.0f
 #define DEFAULT_HEIGHTf 480.0f
-
+#define PI 3.14159265f
 #define MATRIX_SIZE 16
 
 

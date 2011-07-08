@@ -30,7 +30,8 @@ public:
 	{
 		DEBUG_PRINT("Beginning execution of pipeline for primitive: %d.\n",primToExecute->ID());
 		status = PIPELINE_STARTED | PIPELINE_RUNNING;
-		while( current != StageCount && !(status & PIPELINE_PAUSED))
+		current = 0;
+		while( current != StageCount && !( (status & PIPELINE_PAUSED) == PIPELINE_PAUSED ) )
 		{
 			DEBUG_PRINT("Executing primitive: %d at stage: %d.\n",primToExecute->ID(), current);
 			if( RENDERER_SUCCESS == CALL_MEMBER_FN(*RENDERER,stages[current])(primToExecute) )
@@ -45,7 +46,7 @@ public:
 				break;
 			}
 		}
-		if( status & PIPELINE_RUNNING )
+		if( ( status & PIPELINE_RUNNING ) == PIPELINE_RUNNING )
 			status = PIPELINE_FINISHED;
 	}
 

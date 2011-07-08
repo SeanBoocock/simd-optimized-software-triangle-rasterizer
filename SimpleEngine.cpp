@@ -7,7 +7,7 @@
 #include "Vector.h"
 #include <stdio.h>
 #include "Debugging.h"
-#include "Mesh.h"
+
 
 SimpleEngine::SimpleEngine()	:	win(nullptr)
 {
@@ -22,7 +22,7 @@ void SimpleEngine::Initialize()
 	win = new Window();
 	win->Initialize();
 
-	Mesh m;
+	
 
 	m.LoadMesh();
 
@@ -45,8 +45,16 @@ void SimpleEngine::Run()
 	while(win->MessagePump())
 	{
 		/*dostuff*/
+		trianglesStarted = 0;
+		pixelsPassedLEETest = 0;
+		trianglesPassedClipTest = 0;
+		pixelsPassedZTest= 0;
 		if( win->Present( RENDERER->Draw() ) != S_OK )
 			break;
+		printf("Triangles started: %d.\nTrianglesPassedClipTest: %d.\nPixelsPassedLEETest: %d.\nPixelsPassedZTest: %d.\n", trianglesStarted, 
+																									trianglesPassedClipTest, 
+																									pixelsPassedLEETest,
+																									pixelsPassedZTest);
 	}
 
 }

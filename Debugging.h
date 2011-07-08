@@ -5,9 +5,12 @@
 #include <Windows.h>
 #include "Logging.h"
 
+static int trianglesStarted = 0;
+static int pixelsPassedZTest = 0;
+static int pixelsPassedLEETest = 0;
+static int trianglesPassedClipTest = 0;
 
-
-#define DEBUG
+//#define DEBUG
 #ifndef DEBUG
 #define DEBUG_PRINT(x, ...)
 #else

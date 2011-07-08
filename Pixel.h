@@ -3,7 +3,7 @@
 #define PIXEL_H_
 
 #include "Type.h"
-
+#include <float.h>
 struct PixelBase
 {
 	PixelBase()
@@ -31,7 +31,7 @@ struct Pixel : PixelBase
 		data[1] = ColorComponentDepth();
 		data[2] = ColorComponentDepth();
 		data[3] = ColorComponentDepth();
-		z = (zDepth)INT_MAX;
+		z = (zDepth)FLT_MAX;
 	}
 };
 
@@ -53,7 +53,7 @@ struct Pixel<Intensity,Depth> : PixelBase
 		green = (Intensity)250;
 		blue = (Intensity)150;
 		alpha = (Intensity)0;
-		z = (Depth)INT_MAX;
+		z = (Depth)FLT_MAX;
 	}
 };
 

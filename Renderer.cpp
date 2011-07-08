@@ -35,18 +35,19 @@ HRESULT Renderer::Initialize()
 RenderTarget* Renderer::Draw()
 {
 	unsigned int result = RENDERER_SUCCESS;
+	
 	currentTarget = (++currentTarget < numTargets) ? currentTarget : 0;
-
+	targets[currentTarget]->GetBuffer()->Reset();
 	//Setup matrix stack for this mesh
 	result |= InitializeMatricesForMesh();
-	if( result & RENDERER_FATAL_ERROR )
+	if( ( result & RENDERER_FATAL_ERROR ) == RENDERER_FATAL_ERROR )
 	{
 		DEBUG_PRINT("Failure of initializing matrices.  Aborting.  Flags: %d\n",result);
 		return nullptr;
 	}
 
 	result |= InitializeClippingLimits();
-	if( result & RENDERER_FATAL_ERROR )
+	if( ( result & RENDERER_FATAL_ERROR ) == RENDERER_FATAL_ERROR )
 	{
 		DEBUG_PRINT("Failure of initializing clipping limits.  Aborting.  Flags: %d\n",result);
 		return nullptr;
@@ -57,59 +58,9 @@ RenderTarget* Renderer::Draw()
 		vertexBuffer->At(primitive)->ExecutePipeline();
 	}
 
-#if 0
-	//Batch transform vertices for this mesh based on stack
-	result |= TransformVertices(primitive);
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-
-	//Clip near/far plane
-	result |= ClipPrimitives(primitive);
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-
-	//Sort vertices top to bottom, left to right
-	result |= SortVertices(primitive);
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-
-	//Generate x-y bounding box of pixels
-	result |= GenerateBounds(primitive);
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-
-	//For all pixels in bounding box do LEE test to determine if they're in the triangle (handle special cases on lines/vertices)
-	result |= LEETest(primitive);
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-
-	//Interpolate z for all pixels inside triangle and write z values to depth buffer if they are smaller than existing depth buffer values
-	result |= WriteGBuffer();
-	if( result & RENDERER_FATAL_ERROR )
-	{
-		printf("General failure.  Aborting.  Flags: %d\n",result);
-		return nullptr;
-	}
-#endif
-
 	//after all meshes drawn, do shading for all pixels drawn in depth buffer
 	result |= Shader();
-	if( result & RENDERER_FATAL_ERROR )
+	if( ( result & RENDERER_FATAL_ERROR ) == RENDERER_FATAL_ERROR )
 	{
 		printf("General failure.  Aborting.  Flags: %d\n",result);
 		return nullptr;
@@ -120,8 +71,8 @@ RenderTarget* Renderer::Draw()
 
 unsigned int Renderer::InitializeClippingLimits()
 {
-	ALIGN float min[4] = { 0.0f, 0.0f, camera->NearPlane(), 0.0f };
-	clipMin = Math::LoadVector4Aligned( min );
+	/*ALIGN float min[4] = { 0.0f, 0.0f, camera->NearPlane(), 0.0f };*/
+	clipMin = Math::zero;
 	ALIGN float max[4] = { targets[currentTarget]->GetWidth(), targets[currentTarget]->GetHeight(), camera->FarPlane(), 1.0f };
 	clipMax = Math::LoadVector4Aligned( max );
 	return RENDERER_SUCCESS;
@@ -153,7 +104,7 @@ unsigned int Renderer::TransformVertices(PrimitiveBase* primitive)
 unsigned int Renderer::ClipPrimitives(PrimitiveBase* primitive)
 {
 	DEBUG_PRINT("Renderer executing ClipPrimitives(PrimitiveBase* primitive) for primitive: %d.\n", primitive->ID());	
-	return primitive->ClipVertices(clipMin,clipMax);
+	return primitive->ClipVertices(Math::zero,clipMax);
 }
 
 unsigned int Renderer::SortVertices(PrimitiveBase* primitive)
@@ -179,7 +130,7 @@ unsigned int Renderer::LEETest(PrimitiveBase* primitive)
 	//
 	DEBUG_PRINT("Renderer executing LEETest(PrimitiveBase* primitive) for primitive: %d.\n", primitive->ID());
 	primitive->LEETest(targets[currentTarget]->GetBuffer());
-	WriteGBuffer();
+	//WriteGBuffer();
 	return RENDERER_SUCCESS;
 }
 

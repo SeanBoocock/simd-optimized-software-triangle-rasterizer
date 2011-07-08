@@ -62,7 +62,7 @@ public:
 
 	void AddVertices(DataType* incVertices)
 	{
-		memcpy(vertices,incVertices,sizeof(DataType)*NumVertices);
+		memcpy(modelSpaceVertices,incVertices,sizeof(DataType)*NumVertices);
 		currentNumberVertices = NumVertices;
 	}
 
@@ -73,6 +73,7 @@ public:
 	}
 
 private:
+	DataType modelSpaceVertices[NumVertices];
 	DataType vertices[NumVertices];
 	unsigned short currentNumberVertices;
 	PipelineBase* pipeline;
@@ -101,7 +102,9 @@ public:
 
 	void TransformVertices(const Math::Matrix4X4 &transform)
 	{
-		Math::Matrix4X4 toTransform = Math::Matrix4X4(vertices[0],vertices[1],vertices[2],Math::ident0);
+		++trianglesStarted;
+
+		Math::Matrix4X4 toTransform = Math::Matrix4X4(modelSpaceVertices[0],modelSpaceVertices[1],modelSpaceVertices[2],Math::ident0);
 		//
 		Math::Matrix4X4 transformed = Math::Matrix4X4Multiply( transform, toTransform, false );
 		Math::Transpose( transformed );
@@ -124,11 +127,12 @@ public:
 		comparison = _mm_and_ps( comparison, _mm_cmple_ps( vertices[0], max ) );
 		comparison = _mm_and_ps( comparison, _mm_cmple_ps( vertices[1], max ) );
 		comparison = _mm_and_ps( comparison, _mm_cmple_ps( vertices[2], max ) );
-		return (_mm_movemask_ps(comparison) & VERT_ALL) ? RENDERER_SUCCESS : RENDERER_PRIMITIVE_CLIPPED;
+		return ( (_mm_movemask_ps(comparison) & VERT_ALL) == VERT_ALL )? RENDERER_SUCCESS : RENDERER_PRIMITIVE_CLIPPED;
 	}
 
 	void SortVertices() 
 	{
+		++trianglesPassedClipTest;
 		int yOrder[3] = { 0, 0, 0 }; //Y order from largest to smallest
 		int xOrder[3] = { 0, 0, 0 };
 		//Sort vertically
@@ -145,6 +149,12 @@ public:
 			yOrder[1] = yOrder[2];
 			yOrder[2] = swap;
 		}
+
+		//HACK: testing reversing the order (to the one I had originally intended)
+		float swap = yOrder[0];
+		yOrder[0] = yOrder[2];
+		yOrder[2] = swap;
+		//////////////////////////////////////////////////////
 
 		//Do swaps
 		if(yOrder[0] != 0)
@@ -175,12 +185,12 @@ public:
 
 	void SortByVertexComponent(int* orderOut, ComponentComparison comp)
 	{
-		if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[1] ) ) & comp ) // v[0].y > v[1].y = true
+		if( ( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[1] ) ) & comp ) == comp ) // v[0].y > v[1].y = true
 		{
-			if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[2] )  ) & comp ) // v[0].y > v[2].y = true
+			if( ( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[2] )  ) & comp ) == comp )  // v[0].y > v[2].y = true
 			{
 				orderOut[0] = 0;
-				if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[1], vertices[2] )  ) & comp )
+				if( ( _mm_movemask_ps( _mm_cmpgt_ps( vertices[1], vertices[2] )  ) & comp ) == comp ) 
 				{
 					orderOut[1] = 1;
 					orderOut[2] = 2;
@@ -201,10 +211,10 @@ public:
 		}
 		else // v[0].y > v[1].y = false
 		{
-			if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[1], vertices[2] )  ) & comp ) // v[1].y > v[2].y = true && v[0].y > v[1].y = false
+			if( ( _mm_movemask_ps( _mm_cmpgt_ps( vertices[1], vertices[2] )  ) & comp ) == comp )  // v[1].y > v[2].y = true && v[0].y > v[1].y = false
 			{
 				orderOut[0] = 1;
-				if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[2] )  ) & comp )
+				if( ( _mm_movemask_ps( _mm_cmpgt_ps( vertices[0], vertices[2] )  ) & comp ) == comp ) 
 				{
 					orderOut[1] = 0;
 					orderOut[2] = 2;
@@ -326,8 +336,10 @@ public:
 
 				finalTest = _mm_hsub_ps(testEdgeOneTwo,testEdgeThree);
 				
-				if( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y | VERT_Z) ) == ( VERT_X | VERT_Y | VERT_Z) ) && 
-					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) )
+				if( ( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y | VERT_Z) ) == ( VERT_X | VERT_Y | VERT_Z) ) && 
+					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )/*  ||
+					( ( ( _mm_movemask_ps( _mm_cmplt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y | VERT_Z) ) == ( VERT_X | VERT_Y | VERT_Z) ) && 
+					( _mm_movemask_ps( _mm_cmple_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )*/
 				{
 					WriteBuffer(buffer,planeForInterpolation,(unsigned int)x,(unsigned int)y);
 				}
@@ -340,10 +352,9 @@ public:
 	{
 		//in triangle or on line of one triangle
 		Pixel<> pixel;
-		float testX = 320.485;
-		float testY = 239.83;
+
 		//Interpolate z
-		ALIGN float loadCoords[4] = { (float)testX, 1.0f,  (float)testY, 0.0f };
+		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
 		Math::Vector4 coords = Math::LoadVector4Aligned(loadCoords);
 		coords = _mm_mul_ps(coords,plane);
 		coords = _mm_hadd_ps(coords,coords);
@@ -359,7 +370,7 @@ public:
 
 	void AddVertices(DataType* incVertices)
 	{
-		memcpy(vertices,incVertices,sizeof(DataType)*3);
+		memcpy(modelSpaceVertices,incVertices,sizeof(DataType)*3);
 		currentNumberVertices = 3;
 	}
 
@@ -370,6 +381,7 @@ public:
 	}
 
 private:
+	DataType modelSpaceVertices[3];
 	DataType vertices[3];
 	unsigned short currentNumberVertices;
 	PipelineBase* pipeline;
