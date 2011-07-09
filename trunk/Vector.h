@@ -46,13 +46,16 @@ namespace Math
 
 	//Global constants
 	static const Vector4Constant negate = { -1.0f, -1.0f, -1.0f, -1.0f };
+	static const Vector4Constant twice = { 2.0f, 2.0f, 2.0f, 2.0f };
 	static const Vector4Constant zero = { 0.0f, 0.0f, 0.0f, 0.0f };
 	static const Vector4Constant zero1 = { 0.0f, 1.0f, 0.0f, 1.0f };
+	static const Vector4Constant ident = { 1.0f, 1.0f, 1.0f, 1.0f };
 	static const Vector4Constant ident0 = { 0.0f, 0.0f, 0.0f, 1.0f };
 	static const Vector4Constant ident1 = { 0.0f, 0.0f, 1.0f, 0.0f };
 	static const Vector4Constant ident2 = { 0.0f, 1.0f, 0.0f, 0.0f };
 	static const Vector4Constant ident3 = { 1.0f, 0.0f, 0.0f, 0.0f };
 	static const Vector4Constant half = { 0.5f, 0.5f, 0.0f, 0.0f };
+	static const Vector4Constant colorScale = { 255.0f, 255.0f, 255.0f, 255.0f };
 	static const Vector4Constant compareTrue = { FLT_MAX , FLT_MAX, FLT_MAX, FLT_MAX};
 
 	//Operators

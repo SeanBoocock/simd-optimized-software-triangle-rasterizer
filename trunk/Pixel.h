@@ -4,44 +4,71 @@
 
 #include "Type.h"
 #include <float.h>
-struct PixelBase
+#include "Alignment.h"
+
+/*ALIGN_TO(32)*/ struct PixelBase
 {
-	PixelBase()
+	PixelBase()	: writtenTo(false)
 	{
 		Reset();
 	}
 	virtual ~PixelBase(){}
-
 	virtual void Reset() {}
+	const bool IsWrittenTo() const
+	{
+		return writtenTo;
+	}
 
+	bool writtenTo;
 };
 
-template<typename ColorComponentDepth = Intensity, typename zDepth = Depth>
+template<typename ColorComponentDepth = Intensity, typename zDepth = Depth, typename int dataSize = 4>
 struct Pixel : PixelBase
 {
-	ColorComponentDepth data[4];
+	ALIGN ColorComponentDepth data[dataSize];
 	zDepth z;
 	Pixel()
 	{
-		
+		//data = new ColorComponentDepth[size];
 	}
+	~Pixel()
+	{
+		//delete data;
+	}
+
+	void PutData(ColorComponentDepth&& incData)
+	{
+		data[0] = std::forward<ColorComponentDepth>(incData);
+		writtenTo = true;
+	}
+
+	void PutData(ColorComponentDepth& incData)
+	{
+		data[0] = incData;
+		writtenTo = true;
+	}
+
 	void Reset()
 	{
-		data[0] = ColorComponentDepth();
-		data[1] = ColorComponentDepth();
-		data[2] = ColorComponentDepth();
-		data[3] = ColorComponentDepth();
+		for(int i = 0; i < dataSize; ++i)
+			data[i] = ColorComponentDepth();
 		z = (zDepth)FLT_MAX;
+		writtenTo = false;
 	}
 };
 
-template<>
-struct Pixel<Intensity,Depth> : PixelBase
+enum ColorIndex : unsigned short
 {
-	Intensity red;
-	Intensity green;
-	Intensity blue;
-	Intensity alpha;
+	RED = 0,
+	GREEN,
+	BLUE,
+	ALPHA
+};
+
+template<>
+struct Pixel<Intensity,Depth,4> : PixelBase
+{
+	ALIGN Intensity color[4];
 	Depth z;
 	Pixel()
 	{
@@ -49,11 +76,12 @@ struct Pixel<Intensity,Depth> : PixelBase
 	}
 	void Reset()
 	{
-		red = (Intensity)250;
-		green = (Intensity)250;
-		blue = (Intensity)150;
-		alpha = (Intensity)0;
+		color[RED] = (Intensity)250;
+		color[GREEN] = (Intensity)250;
+		color[BLUE] = (Intensity)150;
+		color[ALPHA] = (Intensity)0;
 		z = (Depth)FLT_MAX;
+		writtenTo = false;
 	}
 };
 

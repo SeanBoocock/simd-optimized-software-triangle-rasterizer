@@ -10,7 +10,7 @@
 #include "Alignment.h"
 
 static const Math::Vector4Constant cameraUp = { 0.0f, 1.0f, 0.0f, 1.0f };
-static const Math::Vector4Constant cameraDefaultPosition = { -10.0f, 5.0f, -10.0f, 1.0f };
+static const Math::Vector4Constant cameraDefaultPosition = { -5.0f, 2.0f, -5.0f, 1.0f };
 
 enum DirtyBits : unsigned short
 {
@@ -62,6 +62,7 @@ public:
 		lookAt = Math::LoadVector4Aligned(ident0F);
 		position = Math::LoadVector4Aligned(cameraDefaultPositionF);*/
 		cameraStack = new MatrixStack<CameraMatrices,NUM_MATRICES>();
+		SetupMatrices();
 	}
 
 	~Camera()
@@ -106,6 +107,11 @@ public:
 		if ( ((MatrixStack<CameraMatrices,NUM_MATRICES>*)cameraStack)->TopType()  != NUM_MATRICES )
 			SetupMatrices();
 		return ((MatrixStack<CameraMatrices,NUM_MATRICES>*)cameraStack)->Top();
+	}
+
+	const MatrixStackBase* CameraStack()
+	{
+		return cameraStack;
 	}
 
 	const Vector4& GetCameraLookAt() const
