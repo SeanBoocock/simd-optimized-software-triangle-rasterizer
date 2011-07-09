@@ -27,16 +27,17 @@ public:
 	void LoadMesh()
 	{
 		ALIGN float	vertexList[3][4];	/* vertex position coordinates */ 
-		GzCoord		normalList[3];	/* vertex normals */ 
+		ALIGN float	normalList[3][4];	/* vertex normals */ 
 		GzTextureIndex  	uvList[3];
 		
 		vertexList[0][3] = 1.0f;
 		vertexList[1][3] = 1.0f;
 		vertexList[2][3] = 1.0f;
-		
-		Math::Vector4 rows[3];
 
-		
+		normalList[0][3] = 1.0f;
+		normalList[1][3] = 1.0f;
+		normalList[2][3] = 1.0f;
+
 		while( fscanf(inFile, "%s", dummy) == 1) 
 		{ 	
 			fscanf(inFile, "%f %f %f %f %f %f %f %f", 
@@ -58,11 +59,14 @@ public:
 			&(normalList[2][2]), 
 			&(uvList[2][0]), &(uvList[2][1]) );
 
-			Math::Vector4 rows[3];
-			rows[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
-			rows[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
-			rows[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
-			PrimitiveBase* toAdd = new Primitive<>(rows);
+			Math::Vector4 rowsVerts[3],rowsNormals[3];
+			rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+			rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+			rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+			rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+			rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+			rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+			PrimitiveBase* toAdd = new Primitive<>(rowsVerts,rowsNormals);
 			buffer->PushBack(toAdd);
 		}
 	}

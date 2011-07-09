@@ -5,6 +5,7 @@
 #include "Pipeline.h"
 #include "PrimitiveBase.h"
 #include "Alignment.h"
+#include <vector>
 
 enum ComponentComparison : unsigned short
 {
@@ -84,10 +85,12 @@ template<typename DataType>
 class Primitive<DataType,3>: public PrimitiveBase
 {
 public:
-	Primitive(DataType* incVertices = nullptr)	:	currentNumberVertices(0)
+	Primitive(DataType* incVertices = nullptr, DataType* incNormals = nullptr )	:	currentNumberVertices(0)
 	{
 		if(incVertices)
 			AddVertices(incVertices);
+		if(incNormals)
+			AddNormals(incNormals);
 		pipeline = new Pipeline<>();
 	}
 
@@ -105,6 +108,7 @@ public:
 		++trianglesStarted;
 
 		Math::Matrix4X4 toTransform = Math::Matrix4X4(modelSpaceVertices[0],modelSpaceVertices[1],modelSpaceVertices[2],Math::ident0);
+		Math::Matrix4X4 toTransformNormals = Math::Matrix4X4(modelSpaceNormals[0],modelSpaceNormals[1],modelSpaceNormals[2],Math::ident0);
 		//
 		Math::Matrix4X4 transformed = Math::Matrix4X4Multiply( transform, toTransform, false );
 		Math::Transpose( transformed );
@@ -115,6 +119,17 @@ public:
 		vertices[0] = transformed.rows[0];
 		vertices[1] = transformed.rows[1];
 		vertices[2] = transformed.rows[2];
+
+		transformed = Math::Matrix4X4Multiply( transform, toTransformNormals, false );
+		Math::Transpose( transformed );
+		Math::ScaleForW( transformed.rows[0] );
+		Math::ScaleForW( transformed.rows[1] );
+		Math::ScaleForW( transformed.rows[2] );
+		
+		normals[0] = transformed.rows[0];
+		normals[1] = transformed.rows[1];
+		normals[2] = transformed.rows[2];
+
 	}
 
 	unsigned int ClipVertices(const Math::Vector4 &min, const Math::Vector4 &max)
@@ -142,34 +157,46 @@ public:
 
 		GenerateBounds(xOrder,yOrder);
 
-		//Find the vertex between the lower two that is on the left.  If that order is different from yOrder then swap values
-		if( _mm_movemask_ps( _mm_cmpgt_ps( vertices[ yOrder[1] ], vertices[ yOrder[2] ] )  ) & VERT_X )
+		///Midpoint test
+		//Idea here is test a line between top/bottom verts and see where on that line a horizontal line drawn through
+		//the remaining vert (ie yOrder[1]) intersects.  If the x component of the intersection is less (ie left) of the x
+		//component of the middle vert (ie yOrder[1]) then the cw(clockwise) vert order is yOrder[0] --> yOrder[2] --> yOrder[1]
+		//Otherwise it is yOrder[0] --> yOrder[1] --> yOrder[2]
+
+		Math::Vector4 temp = _mm_sub_ps(vertices[ yOrder[2] ], vertices[ yOrder[0] ]); // { x2-x0, y2-y0, z2-z0, w2-w0 };
+		Math::Vector4 temp1 = _mm_sub_ps(vertices[ yOrder[1] ], vertices[ yOrder[0] ]); // { x1-x0, y1-y0, z1-z0, w1-w0 };
+		temp1 = _mm_movehdup_ps(temp1);// { y1-y0, y1-y0, w1-w0,w1-w0 };
+		temp1 = _mm_mul_ps(temp,temp1);// { (y1-y0)(x2-x0), y1-y0, y1-y0,y1-y0 };
+		temp =  _mm_movehdup_ps(temp);// { y2-y0, y2-y0, w2-w0, w2-w0 };
+		temp1 = _mm_div_ss(temp1,temp);// {(y1-y0)(x2-x0) / y2-y0, y2-y0, w2-w0, w2-w0 };
+		temp1 = _mm_add_ss(temp1,vertices[ yOrder[0] ]);// {(y1-y0)(x2-x0) / y2-y0  + x0, y2-y0, w2-w0, w2-w0 };
+		if( ( _mm_movemask_ps( _mm_cmplt_ps( vertices[ yOrder[1] ], temp1 ) ) & VERT_X ) == VERT_X ) //swap yOrder[1] and yOrder[2]
 		{
 			int swap = yOrder[1];
 			yOrder[1] = yOrder[2];
 			yOrder[2] = swap;
 		}
 
-		//HACK: testing reversing the order (to the one I had originally intended)
-		float swap = yOrder[0];
-		yOrder[0] = yOrder[2];
-		yOrder[2] = swap;
-		//////////////////////////////////////////////////////
-
 		//Do swaps
 		if(yOrder[0] != 0)
 		{
 			Math::Vector4 swap = vertices[0];
+			Math::Vector4 swap2 = normals[0];
 			vertices[0] = vertices[ yOrder[0] ];
+			normals[0] = normals[ yOrder[0] ];
 			if(yOrder[1] != 0)
 			{
 				vertices[1] = vertices[ yOrder[1] ];
+				normals[1] = normals[ yOrder[1]  ];
 				vertices[2] = swap;
+				normals[2] = swap2;
 			}
 			else
 			{
 				vertices[1] = swap;
+				normals[1] = swap2;
 				vertices[2] = vertices[ yOrder[2] ];
+				normals[2] = normals[ yOrder[2] ];
 			}
 		}
 		else
@@ -177,8 +204,11 @@ public:
 			if(yOrder[1] != 1)
 			{
 				Math::Vector4 swap = vertices[1];
+				Math::Vector4 swap2 = normals[1];
 				vertices[1] = vertices[ yOrder[1] ];
+				normals[1] = normals[ yOrder[1] ];
 				vertices[2] = swap;
+				normals[2] = swap;
 			}
 		}
 	}
@@ -294,12 +324,48 @@ public:
 		output = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
 	}
 
+	void GenerateInterpolationPlane(Math::Vector4 output[], const Math::Vector4 &vert0, const Math::Vector4 &vert1, const Math::Vector4 &vert2)
+	{
+		//General plane equation: Ax + By + Cz + D = 0
+		Math::Vector4 edgeOne = _mm_sub_ps(vert0,vert1);
+		Math::Normalize( edgeOne );
+		Math::Vector4 edgeTwo = _mm_sub_ps(vert0,vert2);
+		Math::Normalize( edgeTwo );
+		Math::Vector4 D,ABC,minusABC;
+
+		// Cross product will provide A,B,C coefficients.
+		ABC = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
+
+		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
+		minusABC = edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
+		edgeTwo = _mm_mul_ps( edgeOne, vert0 ); // { -A*(x0), -B*(y0), -C*(z0), 0 }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
+		D = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
+
+		edgeOne = _mm_shuffle_ps(minusABC, minusABC, _MM_SHUFFLE(3, 2, 3, 1)); // { -B, 0, -C , 0 }
+		edgeOne = _mm_sub_ps(edgeOne, D); // {-B,-D,-C,0 } 
+		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(0, 0, 0, 0)); // {A,A,A,A}
+		output[0] = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -B/A, - D/A, -C/A, 0};
+
+		edgeOne = _mm_shuffle_ps(minusABC, minusABC, _MM_SHUFFLE(3, 2, 3, 0)); // { -A, 0, -C , 0 }
+		edgeOne = _mm_sub_ps(edgeOne, D); // {-A,-D,-C,0 } 
+		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(1, 1, 1, 1)); // {B,B,B,B}
+		output[1] = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/B, - D/B, -C/B, 0};
+		
+		edgeOne = _mm_shuffle_ps(minusABC, minusABC, _MM_SHUFFLE(3, 1, 3, 0)); // { -A, 0, -B , 0 }
+		edgeOne = _mm_sub_ps(edgeOne, D); // {-A,-D,-B,0 } 
+		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
+		output[2] = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
+	}
+
 	void LEETest(FramebufferBase* buffer)
 	{
 		//Setup 
-		Math::Vector4 planeForInterpolation;
-		GenerateInterpolationPlane(planeForInterpolation);
-		
+		Math::Vector4 planeForZInterpolation;
+		Math::Vector4 planesForNormalsInterpolation[3];
+		GenerateInterpolationPlane(planeForZInterpolation);
+		GenerateInterpolationPlane(planesForNormalsInterpolation,normals[0],normals[1],normals[2]);
 		/*
 		*Edge Equation:  E(x,y) = dY (x-X) - dX (y-Y) 
 			= 0 for points (x,y) on line
@@ -336,35 +402,50 @@ public:
 
 				finalTest = _mm_hsub_ps(testEdgeOneTwo,testEdgeThree);
 				
-				if( ( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y | VERT_Z) ) == ( VERT_X | VERT_Y | VERT_Z) ) && 
-					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )/*  ||
-					( ( ( _mm_movemask_ps( _mm_cmplt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y | VERT_Z) ) == ( VERT_X | VERT_Y | VERT_Z) ) && 
-					( _mm_movemask_ps( _mm_cmple_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )*/
+				if( ( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y ) ) == ( VERT_X | VERT_Y) ) && 
+					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )
 				{
-					WriteBuffer(buffer,planeForInterpolation,(unsigned int)x,(unsigned int)y);
+					WriteBuffer(buffer,planeForZInterpolation,planesForNormalsInterpolation,(unsigned int)x,(unsigned int)y);
 				}
 
 			}
 		}
 	}
 
-	void WriteBuffer(FramebufferBase* buffer, const Math::Vector4 &plane, const unsigned int &x, const unsigned int &y)
+	void WriteBuffer(FramebufferBase* buffer, const Math::Vector4 &zPlane, const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
 		//in triangle or on line of one triangle
-		Pixel<> pixel;
+		Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();
 
 		//Interpolate z
 		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
 		Math::Vector4 coords = Math::LoadVector4Aligned(loadCoords);
-		coords = _mm_mul_ps(coords,plane);
+		coords = _mm_mul_ps(coords,zPlane);
 		coords = _mm_hadd_ps(coords,coords);
 		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated z value
-		_mm_store_ss(&pixel.z, coords);
-		pixel.red = 50;
-		pixel.green = 50;
-		pixel.blue = 50;
+		_mm_store_ss(&pixel->z, coords);
+
+		Math::Vector4 toAssignToPixel = Math::zero;
+		coords = _mm_mul_ps(coords,normalPlane[0]);
+		coords = _mm_hadd_ps(coords,coords);
+		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,0,0));
+		coords = _mm_mul_ps(coords,normalPlane[1]);
+		coords = _mm_hadd_ps(coords,coords);
+		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,1,0));
+		coords = _mm_mul_ps(coords,normalPlane[2]);
+		coords = _mm_hadd_ps(coords,coords);
+		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,2,0));
+		Math::Normalize(toAssignToPixel);
 		
-		buffer->PutPixel(&pixel,(unsigned int) x, (unsigned int) y);
+		/*pixel->PutData(std::forward<Math::Vector4 >(toAssignToPixel));*/
+		//SANITY CHECK
+		toAssignToPixel = normals[1];
+		Math::Normalize(toAssignToPixel);
+		pixel->PutData(toAssignToPixel);
+		buffer->PutPixel(pixel,(unsigned int) x, (unsigned int) y);
 	}
 
 
@@ -372,6 +453,11 @@ public:
 	{
 		memcpy(modelSpaceVertices,incVertices,sizeof(DataType)*3);
 		currentNumberVertices = 3;
+	}
+
+	void AddNormals(DataType* incNormals)
+	{
+		memcpy(modelSpaceNormals,incNormals,sizeof(DataType)*3);
 	}
 
 	void AddVertex(const DataType &vertex)
@@ -382,7 +468,9 @@ public:
 
 private:
 	DataType modelSpaceVertices[3];
+	DataType modelSpaceNormals[3];
 	DataType vertices[3];
+	DataType normals[3];
 	unsigned short currentNumberVertices;
 	PipelineBase* pipeline;
 };

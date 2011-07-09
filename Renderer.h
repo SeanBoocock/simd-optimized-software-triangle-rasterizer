@@ -7,13 +7,33 @@
 #include "Vector.h"
 #include "Alignment.h"
 
+class MatrixStackBase;
 class Camera;
 class Buffer;
 class FramebufferBase;
 class RenderTarget;
 class PrimitiveBase;
 
+#define numLights 3
+
+enum ShaderMode	: unsigned short
+{
+	PHONG,
+	GOURAUD
+};
+
+enum RenderMatrices
+{
+	ROTATION
+};
+
 #define RENDERER Renderer::GetInstancePtr()
+
+ALIGN struct Light
+{
+	ALIGN Math::Vector4 lightDir;
+	ALIGN Math::Vector4 lightColor;
+};
 
 ALIGN class Renderer	: public Singleton<Renderer>
 {
@@ -55,6 +75,7 @@ private:
 	unsigned int Shader();
 
 	Camera* camera;
+	MatrixStackBase* renderStack;
 	Buffer* vertexBuffer;
 
 	//clipping to view frustrum in screen space
@@ -67,6 +88,17 @@ private:
 
 	unsigned short numGBuffers;
 	FramebufferBase** gBuffers; //intermediate buffers before final shading
+
+	//TEMPORARY LIGHTS/Shader constants
+	Light lights[numLights];//directions
+	Light ambientLight; //color value
+	int specularPower;
+	Math::Vector4 CalculateSpecPower(const Math::Vector4& toPower);
+	Math::Vector4 specCoefficient;
+
+	Math::Vector4 diffuseCoefficient;
+	Math::Vector4 ambientCoefficient;
+	ShaderMode shadeMode;
 };
 
 

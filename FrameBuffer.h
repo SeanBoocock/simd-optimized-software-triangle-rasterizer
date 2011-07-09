@@ -9,6 +9,8 @@
 #include "Alignment.h"
 #include "Pixel.h"
 #include "Debugging.h"
+#include "InterlockedZBufferExchange.h"
+
 
 template<typename BufferOf = Pixel<Intensity,Depth>, typename ColorComponentDepth = Intensity, typename zDepth = Depth>
 class FrameBuffer	:	public FramebufferBase
@@ -20,21 +22,71 @@ public:
 				unsigned int yDimension = DEFAULT_HEIGHT)	:	xDim(xDimension),
 																yDim(yDimension)
 	{
-		buffer = new BufferOf[bufferSize = xDim * yDim];
-		Reset();
+		buffer = new BufferOf*[bufferSize = xDim * yDim];
+		for(unsigned int i = 0; i < bufferSize; ++i)
+			buffer[i] = new BufferOf();
 	}
 
 	~FrameBuffer()
 	{
 		if( buffer )
-			delete buffer;
+			delete [] buffer;
 	}
 
 	ALIGNED_NEW
 
-	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y)
+	const float GetWidth()
 	{
+		return (float) xDim;
+	}
 
+	const float GetHeight()
+	{
+		return (float) yDim;
+	}
+
+	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y, bool directWrite = false)
+	{
+		if(directWrite)
+		{
+			delete buffer[ y * xDim + x ];
+			buffer[ y * xDim + x ] = static_cast<BufferOf*>(pixel);
+			return;
+		}
+		
+		BufferOf* oldVal = buffer[ y * xDim + x ];
+
+		if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(BufferOf*)pixel) )
+		{
+			delete oldVal;
+		}
+	}
+
+	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
+	{
+		if(directWrite)
+		{
+			delete buffer[ val ];
+			buffer[ val ] = static_cast<BufferOf*>(pixel);
+			return;
+		}
+		
+		BufferOf* oldVal = buffer[ val ];
+
+		if( InterlockedZBufferExchange(&buffer[ val ],(BufferOf*)pixel) )
+		{
+			delete oldVal;
+		}
+	}
+
+	const PixelBase* GetPixel(unsigned int x, unsigned int y)
+	{
+		return buffer[ y * xDim + x ];
+	}
+
+	const PixelBase* GetPixel(unsigned int val)
+	{
+		return buffer[ val ];
 	}
 
 	char* FlushBuffer()
@@ -50,7 +102,7 @@ public:
 	void Reset()
 	{
 		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i].Reset();
+			buffer[i]->Reset();
 	}
 
 	void Resize(int xDim, int yDim)
@@ -59,7 +111,7 @@ public:
 	}
 
 private:
-	BufferOf* buffer;
+	BufferOf** buffer;
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;
@@ -76,35 +128,65 @@ public:
 																yDim(yDimension),
 																bufferToDisplay(nullptr)
 	{
-		buffer = new Pixel<Intensity,Depth>[bufferSize = xDim * yDim];
-		Reset();
+		buffer = new Pixel<Intensity,Depth>*[bufferSize = xDim * yDim];
+		for(unsigned int i = 0; i < bufferSize; ++i)
+			buffer[i] = new Pixel<Intensity,Depth>();
 	}
 
 	~FrameBuffer()
 	{
 		if( buffer )
-			delete buffer;
+			delete [] buffer;
 	}
 
 	ALIGNED_NEW
 
-	virtual const float GetWidth()
+	const float GetWidth()
 	{
 		return (float) xDim;
 	}
 
-	virtual const float GetHeight()
+	const float GetHeight()
 	{
 		return (float) yDim;
 	}
 
-	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y)
+	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y, bool directWrite = false)
 	{
-		++pixelsPassedLEETest;
-		if( ((Pixel<Intensity,Depth>*)pixel)->z < buffer[ y * xDim + x ].z )
+		if(directWrite)
+		{
+			delete buffer[ y * xDim + x ];
+			buffer[ y * xDim + x ] = (Pixel<Intensity,Depth>*)pixel;
+			return;
+		}
+
+		Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];
+
+		if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
+		{
+			delete oldVal;
+		}
+		/*if( ((Pixel<Intensity,Depth,4>*)pixel)->z < buffer[ y * xDim + x ].z )
 		{
 			++pixelsPassedZTest;
 			buffer[ y * xDim + x ] = *((Pixel<Intensity,Depth>*)pixel);
+		}*/
+	}
+
+	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
+	{
+		if(directWrite)
+		{
+			delete buffer[ val ];
+			buffer[ val ] = (Pixel<Intensity,Depth>*)pixel;
+			return;
+		}
+
+		Pixel<Intensity,Depth,4>* oldVal = buffer[ val ];
+
+		if( InterlockedZBufferExchange(&buffer[ val ],(Pixel<Intensity,Depth,4>*)pixel) )
+		{
+			delete oldVal;
 		}
 	}
 
@@ -114,9 +196,9 @@ public:
 		bufferToDisplay = new char[bufferSize * 3];
 		for(unsigned int i = 0, j = -1; i < bufferSize; ++i)
 		{
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].red);
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].green);
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i].blue);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[RED]);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[GREEN]);
+			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[BLUE]);
 		}
 		return bufferToDisplay;
 	}
@@ -129,7 +211,7 @@ public:
 	void Reset()
 	{
 		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i].Reset();
+			buffer[i]->Reset();
 	}
 
 	void Resize(int xDim, int yDim)
@@ -138,7 +220,7 @@ public:
 	}
 
 private:
-	Pixel<Intensity,Depth>* buffer;
+	Pixel<Intensity,Depth,4>** buffer;
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;

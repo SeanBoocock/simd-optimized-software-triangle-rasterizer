@@ -40,9 +40,9 @@ public:
 	}
 
 	MatrixStackBase* Below()	{	return below; }
-	void SetStackBelow(MatrixStackBase* incBelow)
+	void SetStackBelow(const MatrixStackBase* incBelow)
 	{
-		below = incBelow;
+		below = const_cast<MatrixStackBase*>(incBelow);
 	}
 
 protected:
