@@ -129,13 +129,14 @@ public:
 		normals[0] = transformed.rows[0];
 		normals[1] = transformed.rows[1];
 		normals[2] = transformed.rows[2];
-
+		Math::Normalize(normals[0]);
+		Math::Normalize(normals[1]);
+		Math::Normalize(normals[2]);
 	}
 
 	unsigned int ClipVertices(const Math::Vector4 &min, const Math::Vector4 &max)
 	{
 		Math::Vector4 comparison = _mm_cmpge_ps( vertices[0], min );
-		/*comparison = _mm_and_ps( comparison, _mm_cmpge_ps( vertices[0], min ) );*/
 		comparison = _mm_and_ps( comparison, _mm_cmpge_ps( vertices[1], min ) );
 		comparison = _mm_and_ps( comparison, _mm_cmpge_ps( vertices[2], min ) );
 
@@ -181,22 +182,16 @@ public:
 		if(yOrder[0] != 0)
 		{
 			Math::Vector4 swap = vertices[0];
-			Math::Vector4 swap2 = normals[0];
 			vertices[0] = vertices[ yOrder[0] ];
-			normals[0] = normals[ yOrder[0] ];
 			if(yOrder[1] != 0)
 			{
 				vertices[1] = vertices[ yOrder[1] ];
-				normals[1] = normals[ yOrder[1]  ];
 				vertices[2] = swap;
-				normals[2] = swap2;
 			}
 			else
 			{
 				vertices[1] = swap;
-				normals[1] = swap2;
 				vertices[2] = vertices[ yOrder[2] ];
-				normals[2] = normals[ yOrder[2] ];
 			}
 		}
 		else
@@ -204,11 +199,8 @@ public:
 			if(yOrder[1] != 1)
 			{
 				Math::Vector4 swap = vertices[1];
-				Math::Vector4 swap2 = normals[1];
 				vertices[1] = vertices[ yOrder[1] ];
-				normals[1] = normals[ yOrder[1] ];
 				vertices[2] = swap;
-				normals[2] = swap;
 			}
 		}
 	}
@@ -278,7 +270,7 @@ public:
 		SetPixelBounds(minX,storeYMin[1],maxX,storeYMax[1]);
 	}
 
-	void GenerateBarycentric(Math::Vector4 &output)
+	void GenerateBarycentric(Math::Vector4 &output, const unsigned int &x, const unsigned int &y )
 	{
 		/*
 		GzCoord barycentricCoord = {0.0,0.0,0.0};
@@ -289,14 +281,31 @@ public:
 	v[1].z * barycentricCoord[1] = ((vertices[2][1]-vertices[0][1])*(x - vertices[2][0])+(vertices[0][0]-vertices[2][0])*(y-vertices[2][1]))/determinant;
 	v[2].z * barycentricCoord[2] = 1 - barycentricCoord[0] - barycentricCoord[1];
 		*/
-		Math::Vector4 temp = _mm_sub_ps(vertices[0],vertices[2]);
+		Math::Vector4 temp = _mm_sub_ps(vertices[0],vertices[2]);//{ (vertices[0][0] - vertices[2][0]),(vertices[0][1] - vertices[2][1])
 		Math::Vector4 temp1 = _mm_sub_ps(vertices[1],vertices[2]);
-		temp1 =  _mm_shuffle_ps(temp1, temp1, _MM_SHUFFLE(3, 3, 0, 1));
+		temp1 =  _mm_shuffle_ps(temp1, temp1, _MM_SHUFFLE(3, 3, 0, 1));//{(vertices[1][1] - vertices[2][1]),(vertices[1][0] - vertices[2][0])
 		Math::Vector4 determinant = _mm_mul_ps(temp,temp1);
 		determinant = _mm_hsub_ps(determinant,determinant);//{determinant,0,determinant,0};
+		determinant = _mm_insert_ps(Math::ident,determinant,_MM_MK_INSERTPS_NDX(0,1,0));//{1,determinant,1,1};
 
-		Math::Vector4 temp2 = _mm_sub_ps(vertices[2],vertices[0]);
+		ALIGN float coords[4] = { (float)x, (float)y, 0.0f, 0.0f };
+		Math::Vector4 temp2 = Math::LoadVector4Aligned(coords);
 
+		Math::Vector4 temp3 = _mm_sub_ps(temp2,vertices[2]); // {(x - vertices[2][0]), (y-vertices[2][1]),
+		Math::Vector4 temp4 = _mm_mul_ps(temp1,temp3); // {(vertices[1][1] - vertices[2][1])*(x - vertices[2][0]), (vertices[1][0] - vertices[2][0])*(y-vertices[2][1]),
+		temp4 = _mm_div_ps(temp4,determinant);// {(vertices[1][1] - vertices[2][1])*(x - vertices[2][0]), (vertices[1][0] - vertices[2][0])*(y-vertices[2][1])/determinant,
+		temp4 = _mm_hsub_ps(temp4,temp4);
+		output = _mm_insert_ps(Math::zero,temp4,_MM_MK_INSERTPS_NDX(0,0,0));
+
+		temp =  _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(3, 3, 0, 1));//{ (vertices[0][1] - vertices[2][1]), (vertices[0][0] - vertices[2][0]),
+		temp =  _mm_mul_ps(Math::flip1, temp);//{ (vertices[2][1]-vertices[0][1]), (vertices[0][0] - vertices[2][0]),
+		temp = _mm_mul_ps(temp3,temp);
+		temp = _mm_div_ps(temp,determinant);
+		temp = _mm_hadd_ps(temp,temp);
+		output = _mm_insert_ps(output ,temp,_MM_MK_INSERTPS_NDX(0,1,0));
+		temp = _mm_sub_ps(Math:: ident3 , output);
+		temp = _mm_hadd_ps(temp,temp);
+		output = _mm_insert_ps(output ,temp,_MM_MK_INSERTPS_NDX(0,2,0));
 	}
 
 	void GenerateInterpolationPlane(Math::Vector4 &output)
@@ -327,15 +336,56 @@ public:
 	void GenerateInterpolationPlane(Math::Vector4 output[], const Math::Vector4 &vert0, const Math::Vector4 &vert1, const Math::Vector4 &vert2)
 	{
 		//General plane equation: Ax + By + Cz + D = 0
-		Math::Vector4 edgeOne = _mm_sub_ps(vert0,vert1);
+		Math::Vector4 edgeOne = _mm_sub_ps(vert1,vert0);
 		Math::Normalize( edgeOne );
-		Math::Vector4 edgeTwo = _mm_sub_ps(vert0,vert2);
+		Math::Vector4 edgeTwo = _mm_sub_ps(vert2,vert0);
 		Math::Normalize( edgeTwo );
-		Math::Vector4 D,ABC,minusABC;
+		Math::Vector4 D[3],ABC,minusABC;
 
 		// Cross product will provide A,B,C coefficients.
 		ABC = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
+		if( ( _mm_movemask_ps( _mm_cmpeq_ps( ABC, Math::zero )  ) & VERT_Z  ) ==  VERT_Z )
+		{
+			output[0] = Math::zero;
+			output[1] = Math::zero;
+			output[2] = Math::zero;
+			return;
+		}
+		
+		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
+		minusABC = edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
+		Math::Vector4 vertToUse = vert0;
+		
+		output[0] = _mm_shuffle_ps(vert0, vert0, _MM_SHUFFLE(3, 0, 1, 0));
+		output[1] = _mm_shuffle_ps(vert0, vert0, _MM_SHUFFLE(3, 1, 1, 0));
+		output[2] = _mm_shuffle_ps(vert0, vert0, _MM_SHUFFLE(3, 2, 1, 0));
 
+		edgeTwo = _mm_mul_ps( edgeOne, output[0] ); // { -A*(x0), -B*(y0), -C*(x0), 0 }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
+		D[0] = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
+
+		edgeTwo = _mm_mul_ps( edgeOne, output[1] ); // { -A*(x0), -B*(y0), -C*(x0), 0 }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
+		D[1] = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
+
+		edgeTwo = _mm_mul_ps( edgeOne, output[2] ); // { -A*(x0), -B*(y0), -C*(x0), 0 }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
+		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
+		D[2] = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
+
+		edgeOne = _mm_shuffle_ps(minusABC, minusABC, _MM_SHUFFLE(3, 1, 3, 0)); // { -A, 0, -B , 0 }
+		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
+		
+		output[0] = _mm_sub_ps(edgeOne, D[0]); // {-A,-D,-B,0 } 
+		output[0] = _mm_div_ps(output[0],edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
+		output[1] = _mm_sub_ps(edgeOne, D[1]); // {-A,-D,-B,0 } 
+		output[1] = _mm_div_ps(output[1],edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
+		output[2] = _mm_sub_ps(edgeOne, D[2]); // {-A,-D,-B,0 } 
+		output[2] = _mm_div_ps(output[2],edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
+
+#if 0
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
 		minusABC = edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
 		edgeTwo = _mm_mul_ps( edgeOne, vert0 ); // { -A*(x0), -B*(y0), -C*(z0), 0 }
@@ -357,6 +407,7 @@ public:
 		edgeOne = _mm_sub_ps(edgeOne, D); // {-A,-D,-B,0 } 
 		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
 		output[2] = _mm_div_ps(edgeOne,edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
+#endif
 	}
 
 	void LEETest(FramebufferBase* buffer)
@@ -412,39 +463,62 @@ public:
 		}
 	}
 
-	void WriteBuffer(FramebufferBase* buffer, const Math::Vector4 &zPlane, const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
+	void WriteBuffer(FramebufferBase* buffer, Math::Vector4 &zPlane, Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
+		Math::Vector4 toAssignToPixel = Math::zero;
+		
 		//in triangle or on line of one triangle
 		Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();
 
+		//TESTING- BARYCENTRIC
+		Math::Vector4 localVert0, localVert1, localVert2, localVert3;
+		localVert0=normals[0];
+		localVert1=normals[1];
+		localVert2=normals[2];
+		localVert3 = Math::zero;
+		_MM_MY_TRANSPOSE4_PS(localVert0,localVert1,localVert2,localVert3)
+		GenerateBarycentric(localVert3,x,y);
+		localVert0 = _mm_mul_ps(localVert0,localVert3);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,0,0));
+		localVert0 = _mm_mul_ps(localVert1,localVert3);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,1,0));
+		localVert0 = _mm_mul_ps(localVert2,localVert3);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		localVert0 = _mm_hadd_ps(localVert0,localVert0);
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,2,0));
+		////////////////////////////////////////////////////TESTING///////////////////////////////////
+
 		//Interpolate z
 		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
-		Math::Vector4 coords = Math::LoadVector4Aligned(loadCoords);
-		coords = _mm_mul_ps(coords,zPlane);
-		coords = _mm_hadd_ps(coords,coords);
-		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated z value
-		_mm_store_ss(&pixel->z, coords);
+		Math::Vector4 originalCoords = Math::LoadVector4Aligned(loadCoords);
+		zPlane = _mm_mul_ps(originalCoords,zPlane);
+		zPlane = _mm_hadd_ps(zPlane,zPlane);
+		zPlane = _mm_hadd_ps(zPlane,zPlane); //lowest order word has interpolated z value
+		_mm_store_ss(&pixel->z, zPlane);
 
-		Math::Vector4 toAssignToPixel = Math::zero;
-		coords = _mm_mul_ps(coords,normalPlane[0]);
-		coords = _mm_hadd_ps(coords,coords);
-		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,0,0));
-		coords = _mm_mul_ps(coords,normalPlane[1]);
-		coords = _mm_hadd_ps(coords,coords);
-		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,1,0));
-		coords = _mm_mul_ps(coords,normalPlane[2]);
-		coords = _mm_hadd_ps(coords,coords);
-		coords = _mm_hadd_ps(coords,coords); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,coords,_MM_MK_INSERTPS_NDX(0,2,0));
-		Math::Normalize(toAssignToPixel);
+#if 0 
 		
-		/*pixel->PutData(std::forward<Math::Vector4 >(toAssignToPixel));*/
-		//SANITY CHECK
-		toAssignToPixel = normals[1];
+		normalPlane[0] = _mm_mul_ps(originalCoords,normalPlane[0]);
+		normalPlane[0] = _mm_hadd_ps(normalPlane[0],normalPlane[0]);
+		normalPlane[0] = _mm_hadd_ps(normalPlane[0],normalPlane[0]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[0],_MM_MK_INSERTPS_NDX(0,0,0));
+		normalPlane[1] = _mm_mul_ps(originalCoords,normalPlane[1]);
+		normalPlane[1] = _mm_hadd_ps(normalPlane[1],normalPlane[1]);
+		normalPlane[1] = _mm_hadd_ps(normalPlane[1],normalPlane[1]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[1],_MM_MK_INSERTPS_NDX(0,1,0));
+		normalPlane[2] = _mm_mul_ps(originalCoords,normalPlane[2]);
+		normalPlane[2] = _mm_hadd_ps(normalPlane[2],normalPlane[2]);
+		normalPlane[2] = _mm_hadd_ps(normalPlane[2],normalPlane[2]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[2],_MM_MK_INSERTPS_NDX(0,2,0));
+#endif
+
 		Math::Normalize(toAssignToPixel);
-		pixel->PutData(toAssignToPixel);
+		pixel->PutData(std::forward<Math::Vector4 >(toAssignToPixel));
+		//pixel->PutData(toAssignToPixel);
 		buffer->PutPixel(pixel,(unsigned int) x, (unsigned int) y);
 	}
 

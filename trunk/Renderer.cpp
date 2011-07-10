@@ -208,7 +208,7 @@ unsigned int Renderer::Shader()
 	unsigned int xDim = gBuffers[0]->GetWidth();
 	unsigned int yDim = gBuffers[0]->GetHeight();
 
-	Math::Vector4 nDotL,nDotE,normal,reflection,rDotE,computedColor;
+	Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor;
 
 	Math::Vector4 texture = Math::ident;
 
@@ -219,15 +219,22 @@ unsigned int Renderer::Shader()
 		if(localBuf->GetPixel(val)->IsWrittenTo()) //Pixel was updated during last frame
 		{
 			currentNormal = (Pixel<Math::Vector4,Depth,1>*)const_cast<PixelBase*>(localBuf->GetPixel(val));
-			normal = currentNormal->data[0];
+			origNormal = currentNormal->data[0];
 			computedColor = Math::zero;
 			skipped = 0;
-			for(int i = 0; i < numLights; i++) // 2 = num lights for now
+
+			for(int i = 0; i < numLights; ++i) // 2 = num lights for now
 			{
 				unsigned int compare1,compare2;
+				normal = origNormal;
 				nDotL = Math::Vec3DotVec3(lights[i].lightDir,normal);
 				nDotE = _mm_mul_ps(negate,normal);
-				if( ( ( compare1 = ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ^ ( compare2 = ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ) == 0 )
+				/*if( ( ( compare1 = ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ^ ( compare2 = ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ) == 0 )
+				*/
+				if( ( ( compare1 = ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) && ( compare2 = ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ) ||
+					( ( ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) && ( ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) )
+					)
+				
 				{
 					//light is on opposite side of the surface, thus different signs (xor == 0) thus we skip
 					++skipped;
@@ -240,9 +247,9 @@ unsigned int Renderer::Shader()
 					normal = _mm_mul_ps(negate,normal);
 				}
 
-				reflection = _mm_mul_ps( _mm_mul_ps( Math::twice, nDotL ), normal ) - lights[i].lightDir;
+				reflection = _mm_sub_ps( _mm_mul_ps( _mm_mul_ps( Math::twice, nDotL ), normal ), lights[i].lightDir);
 				Math::Normalize(reflection);
-				rDotE = Math::zero - reflection; // want to flip the z value
+				rDotE = _mm_sub_ps( Math::zero ,  reflection); // want to flip the z value
 				if( (_mm_movemask_ps( _mm_cmplt_ps( rDotE, Math::zero ) ) & VERT_Z ) == VERT_Z )
 					rDotE = Math::zero;
 				else
@@ -250,32 +257,34 @@ unsigned int Renderer::Shader()
 
 				if(shadeMode == PHONG)
 				{
-					computedColor = _mm_add_ps(computedColor, _mm_add_ps( _mm_mul_ps( _mm_mul_ps(specCoefficient,lights[i].lightColor), CalculateSpecPower(rDotE) ), _mm_mul_ps( lights[i].lightColor, nDotL ) ) );
-					computedColor = _mm_add_ps( computedColor, _mm_mul_ps( texture, ambientLight.lightColor ) );
+					computedColor = _mm_add_ps(computedColor, _mm_add_ps( _mm_mul_ps( _mm_mul_ps(specCoefficient,lights[i].lightColor), CalculateSpecPower(rDotE) ), _mm_mul_ps(diffuseCoefficient, _mm_mul_ps( lights[i].lightColor, nDotL ) ) ) );
+					computedColor = _mm_add_ps( computedColor, _mm_mul_ps( ambientCoefficient, ambientLight.lightColor ) );
 				}
 				else if (shadeMode == GOURAUD)
 				{
-					computedColor = _mm_add_ps(computedColor, _mm_add_ps( _mm_mul_ps(lights[i].lightColor, CalculateSpecPower(rDotE) ), _mm_mul_ps( lights[i].lightColor, nDotL ) ) );
+					computedColor = _mm_add_ps(computedColor, _mm_add_ps( _mm_mul_ps(lights[i].lightColor, CalculateSpecPower(rDotE) ), _mm_mul_ps(diffuseCoefficient, _mm_mul_ps( lights[i].lightColor, nDotL ) ) ) );
 					computedColor = _mm_add_ps( computedColor, ambientLight.lightColor );
 				}
 			} // for lights
 			if(skipped < numLights)
 			{
 				//With color computed, get ready to store it
-				computedColor = _mm_mul_ps(colorScale,computedColor);
+				//TESTING JUST WITH NORMALS
+				computedColor = _mm_mul_ps(colorScale,origNormal);
+				/*computedColor = _mm_mul_ps(colorScale,computedColor);*/
+				
 				Pixel<>* pixel = new Pixel<>();
 				ALIGN float tempColor[4];
 				_mm_store_ps(tempColor,computedColor);
-				unsigned short TESTING[4] = { 255, 0, 0, 0 };
 				for(int i = 0; i < 3; ++i)
-					pixel->color[i] = (tempColor[i] < 0) ? 0 : (Intensity)((long)tempColor[i])/*(Intensity)((int)(tempColor[i] * ((1 << 12) - 1)))*/;
+					pixel->color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
 					//pixel->color[i]=TESTING[i];
 				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
 			}
 			else
 			{
 				Pixel<>* pixel = new Pixel<>();
-				unsigned short TESTING[4] = { 0, 0, 0, 0 };
+				unsigned short TESTING[4] = { 255, 0, 0, 0 };
 				for(int i = 0; i < 3; ++i)
 					//pixel->color[i] = (short)((int)(tempColor[i] * ((1 << 12) - 1)));
 					pixel->color[i]=TESTING[i];

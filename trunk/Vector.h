@@ -46,6 +46,7 @@ namespace Math
 
 	//Global constants
 	static const Vector4Constant negate = { -1.0f, -1.0f, -1.0f, -1.0f };
+	static const Vector4Constant flip1 = { -1.0f, 1.0f, 1.0f, 1.0f };
 	static const Vector4Constant twice = { 2.0f, 2.0f, 2.0f, 2.0f };
 	static const Vector4Constant zero = { 0.0f, 0.0f, 0.0f, 0.0f };
 	static const Vector4Constant zero1 = { 0.0f, 1.0f, 0.0f, 1.0f };
