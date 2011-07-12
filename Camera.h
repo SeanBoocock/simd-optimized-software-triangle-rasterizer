@@ -10,7 +10,7 @@
 #include "Alignment.h"
 
 static const Math::Vector4Constant cameraUp = { 0.0f, 1.0f, 0.0f, 1.0f };
-static const Math::Vector4Constant cameraDefaultPosition = { -5.0f, 2.0f, -5.0f, 1.0f };
+static const Math::Vector4Constant cameraDefaultPosition = { -5.0f, 2.0f, 5.0f, 1.0f };
 
 enum DirtyBits : unsigned short
 {
@@ -151,10 +151,10 @@ public:
 
 	void ComputeScreenMatrix(bool replaceOnStack = false)
 	{
-		ALIGN float screenMatrix[4][4] = {	{ xDim / 2.0f,	0.0f,			0.0f,			xDim / 2.0f },
-															{ 0.0f,			-yDim / 2.0f,	0.0f,			yDim / 2.0f },
-															{ 0.0f,			0.0f,			tan( fov / 2 ), 0.0f		},
-															{ 0.0f,			0.0f,			0.0f,			1.0f		}};
+		ALIGN float screenMatrix[4][4] = {	{ xDim / 2.0f,	0.0f,			0.0f,					xDim / 2.0f },
+											{ 0.0f,			-yDim / 2.0f,	0.0f,					yDim / 2.0f },
+											{ 0.0f,			0.0f,			tan( fov / 2 ),0.0f		},
+											{ 0.0f,			0.0f,			0.0f,					1.0f		}};
 
 		if(replaceOnStack)
 			cameraStack->Pop();
