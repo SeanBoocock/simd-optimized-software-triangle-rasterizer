@@ -272,9 +272,8 @@ unsigned int Renderer::Shader()
 				//TESTING JUST WITH NORMALS
 				computedColor = _mm_mul_ps(colorScale,origNormal);
 				/*computedColor = _mm_mul_ps(colorScale,computedColor);*/
-				
 				Pixel<>* pixel = new Pixel<>();
-				ALIGN float tempColor[4];
+				ALIGN float tempColor[4] = { 255, 0, 0, 0 };
 				_mm_store_ps(tempColor,computedColor);
 				for(int i = 0; i < 3; ++i)
 					pixel->color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
@@ -290,7 +289,7 @@ unsigned int Renderer::Shader()
 					pixel->color[i]=TESTING[i];
 				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
 			}
-		}// if(localBuf->GetPixel(val)->IsWrittenTo())
+		}// if(localBuf->GetPixel(val)->IsWrittenTo()
 	}// for(unsigned int val = 0; val < xDim*yDim; ++val)
 	
 	return RENDERER_SUCCESS;

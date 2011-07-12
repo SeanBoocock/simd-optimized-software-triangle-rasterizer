@@ -4,6 +4,7 @@
 
 #include <Windows.h>
 #include "Pixel.h"
+#include "Alignment.h"
 
 //http://msdn.microsoft.com/en-us/library/ms683568(v=VS.85).aspx and http://blogs.msdn.com/b/doronh/archive/2006/12/06/creating-your-own-interlockedxxx-operation.aspx
 

@@ -7,15 +7,6 @@
 #include "Alignment.h"
 #include <vector>
 
-enum ComponentComparison : unsigned short
-{
-	VERT_X = 0x1,
-	VERT_Y = 0x2,
-	VERT_Z = 0x4,
-	VERT_W = 0x8,
-	VERT_ALL = VERT_X | VERT_Y | VERT_Z | VERT_W
-};
-
 template<typename DataType = Math::Vector4, unsigned short NumVertices = 3>
 class Primitive: public PrimitiveBase
 {
@@ -122,9 +113,9 @@ public:
 
 		transformed = Math::Matrix4X4Multiply( transform, toTransformNormals, false );
 		Math::Transpose( transformed );
-		Math::ScaleForW( transformed.rows[0] );
+		/*Math::ScaleForW( transformed.rows[0] );
 		Math::ScaleForW( transformed.rows[1] );
-		Math::ScaleForW( transformed.rows[2] );
+		Math::ScaleForW( transformed.rows[2] );*/
 		
 		normals[0] = transformed.rows[0];
 		normals[1] = transformed.rows[1];
@@ -182,16 +173,22 @@ public:
 		if(yOrder[0] != 0)
 		{
 			Math::Vector4 swap = vertices[0];
+			Math::Vector4 swapNorm = normals[0];
 			vertices[0] = vertices[ yOrder[0] ];
+			normals[0] = normals[ yOrder[0] ];
 			if(yOrder[1] != 0)
 			{
 				vertices[1] = vertices[ yOrder[1] ];
+				normals[1] = normals[ yOrder[1] ];
 				vertices[2] = swap;
+				normals[2] = swapNorm;
 			}
 			else
 			{
 				vertices[1] = swap;
+				normals[1] = swapNorm;
 				vertices[2] = vertices[ yOrder[2] ];
+				normals[2] = normals[ yOrder[2] ];
 			}
 		}
 		else
@@ -199,8 +196,11 @@ public:
 			if(yOrder[1] != 1)
 			{
 				Math::Vector4 swap = vertices[1];
+				Math::Vector4 swapNorm = normals[1];
 				vertices[1] = vertices[ yOrder[1] ];
+				normals[1] = normals[ yOrder[1] ];
 				vertices[2] = swap;
+				normals[2] = swapNorm;
 			}
 		}
 	}
@@ -308,20 +308,20 @@ public:
 		output = _mm_insert_ps(output ,temp,_MM_MK_INSERTPS_NDX(0,2,0));
 	}
 
-	void GenerateInterpolationPlane(Math::Vector4 &output)
+	void GenerateInterpolationPlane(Math::Vector4 &output, const Math::Vector4 &vert0, const Math::Vector4 &vert1, const Math::Vector4 &vert2)
 	{
 		//General plane equation: Ax + By + Cz + D = 0
-		Math::Vector4 edgeOne = _mm_sub_ps(vertices[0],vertices[1]);
+		Math::Vector4 edgeOne = _mm_sub_ps(vert0,vert1);
 		Math::Normalize( edgeOne );
-		Math::Vector4 edgeTwo = _mm_sub_ps(vertices[0],vertices[2]);
+		Math::Vector4 edgeTwo = _mm_sub_ps(vert0,vert2);
 		Math::Normalize( edgeTwo );
 
 		//Reusing edge.  Cross product will provide A,B,C coefficients.
-		output = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
+		interpolationCoef = output = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
 
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
 		edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
-		edgeTwo = _mm_mul_ps( edgeOne, vertices[0] ); // { -A*(x0), -B*(y0), -C*(z0), 0 }
+		edgeTwo = _mm_mul_ps( edgeOne, vert0 ); // { -A*(x0), -B*(y0), -C*(z0), 0 }
 		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo );  // { -A*(x0)- B*(y0), -C*(z0), -A*(x0)- B*(y0), -C*(z0) }
 		edgeTwo = _mm_hadd_ps( edgeTwo, edgeTwo ); // { -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0), -A*(x0) - B*(y0) - C*(z0)  D is now in least significant word
 
@@ -335,25 +335,27 @@ public:
 
 	void GenerateInterpolationPlane(Math::Vector4 output[], const Math::Vector4 &vert0, const Math::Vector4 &vert1, const Math::Vector4 &vert2)
 	{
+#if 0
 		//General plane equation: Ax + By + Cz + D = 0
 		Math::Vector4 edgeOne = _mm_sub_ps(vert1,vert0);
 		Math::Normalize( edgeOne );
 		Math::Vector4 edgeTwo = _mm_sub_ps(vert2,vert0);
 		Math::Normalize( edgeTwo );
-		Math::Vector4 D[3],ABC,minusABC;
+		
 
 		// Cross product will provide A,B,C coefficients.
 		ABC = edgeOne = Math::Vec3CrossVec3(edgeOne,edgeTwo);//{ A, B, C, 0 }
-		if( ( _mm_movemask_ps( _mm_cmpeq_ps( ABC, Math::zero )  ) & VERT_Z  ) ==  VERT_Z )
+#endif
+		if( ( _mm_movemask_ps( _mm_cmpeq_ps( interpolationCoef, Math::zero )  ) & VERT_Z  ) ==  VERT_Z )
 		{
 			output[0] = Math::zero;
 			output[1] = Math::zero;
 			output[2] = Math::zero;
 			return;
 		}
-		
+		Math::Vector4 D[3],ABC,minusABC,edgeOne,edgeTwo;
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
-		minusABC = edgeOne = _mm_sub_ps(Math::zero,edgeOne); //{ -A, -B, -C, 0 }
+		minusABC = edgeOne = _mm_sub_ps(Math::zero,interpolationCoef); //{ -A, -B, -C, 0 }
 		Math::Vector4 vertToUse = vert0;
 		
 		output[0] = _mm_shuffle_ps(vert0, vert0, _MM_SHUFFLE(3, 0, 1, 0));
@@ -376,7 +378,7 @@ public:
 		D[2] = _mm_insert_ps(Math::zero,edgeTwo,_MM_MK_INSERTPS_NDX(0,1,0)); // { 0, D, 0, 0 };
 
 		edgeOne = _mm_shuffle_ps(minusABC, minusABC, _MM_SHUFFLE(3, 1, 3, 0)); // { -A, 0, -B , 0 }
-		edgeTwo = _mm_shuffle_ps(ABC, ABC, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
+		edgeTwo = _mm_shuffle_ps(interpolationCoef, interpolationCoef, _MM_SHUFFLE(2, 2, 2, 2)); // {C,C,C,C}
 		
 		output[0] = _mm_sub_ps(edgeOne, D[0]); // {-A,-D,-B,0 } 
 		output[0] = _mm_div_ps(output[0],edgeTwo); // 0 = { -A/C, - D/C, -B/C, 0};
@@ -415,8 +417,28 @@ public:
 		//Setup 
 		Math::Vector4 planeForZInterpolation;
 		Math::Vector4 planesForNormalsInterpolation[3];
-		GenerateInterpolationPlane(planeForZInterpolation);
-		GenerateInterpolationPlane(planesForNormalsInterpolation,normals[0],normals[1],normals[2]);
+		Math::Vector4 normalInputs[3];
+		
+		normalInputs[0] = _mm_insert_ps(vertices[0],normals[0],_MM_MK_INSERTPS_NDX(0,2,0));
+		normalInputs[1] = _mm_insert_ps(vertices[1],normals[1],_MM_MK_INSERTPS_NDX(0,2,0));
+		normalInputs[2] = _mm_insert_ps(vertices[2],normals[2],_MM_MK_INSERTPS_NDX(0,2,0));
+		GenerateInterpolationPlane(planesForNormalsInterpolation[0],normalInputs[0],normalInputs[1],normalInputs[2]);
+		normalInputs[0] = _mm_insert_ps(vertices[0],normals[0],_MM_MK_INSERTPS_NDX(1,2,0));
+		normalInputs[1] = _mm_insert_ps(vertices[1],normals[1],_MM_MK_INSERTPS_NDX(1,2,0));
+		normalInputs[2] = _mm_insert_ps(vertices[2],normals[2],_MM_MK_INSERTPS_NDX(1,2,0));
+		GenerateInterpolationPlane(planesForNormalsInterpolation[1],normalInputs[0],normalInputs[1],normalInputs[2]);
+		normalInputs[0] = _mm_insert_ps(vertices[0],normals[0],_MM_MK_INSERTPS_NDX(2,2,0));
+		normalInputs[1] = _mm_insert_ps(vertices[1],normals[1],_MM_MK_INSERTPS_NDX(2,2,0));
+		normalInputs[2] = _mm_insert_ps(vertices[2],normals[2],_MM_MK_INSERTPS_NDX(2,2,0));
+		GenerateInterpolationPlane(planesForNormalsInterpolation[2],normalInputs[0],normalInputs[1],normalInputs[2]);
+		/*for(int j = 0; j < 3; ++j)
+		{
+			for(int i = 0; i < 3; ++i)
+				normalInputs[i] = _mm_insert_ps(vertices[i],normals[i],_MM_MK_INSERTPS_NDX(j,2,0));
+			GenerateInterpolationPlane(planesForNormalsInterpolation[j],normalInputs[0],normalInputs[1],normalInputs[2]);
+		}*/
+		GenerateInterpolationPlane(planeForZInterpolation,vertices[0],vertices[1],vertices[2]);
+		//GenerateInterpolationPlane(planesForNormalsInterpolation,normals[0],normals[1],normals[2]);
 		/*
 		*Edge Equation:  E(x,y) = dY (x-X) - dX (y-Y) 
 			= 0 for points (x,y) on line
@@ -453,8 +475,9 @@ public:
 
 				finalTest = _mm_hsub_ps(testEdgeOneTwo,testEdgeThree);
 				
-				if( ( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_X | VERT_Y ) ) == ( VERT_X | VERT_Y) ) && 
-					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z ) ) == VERT_Z ) )
+				if( ( ( ( _mm_movemask_ps( _mm_cmpgt_ps( finalTest, Math::zero )  ) & ( VERT_Y | VERT_X  ) ) == ( VERT_Y | VERT_X ) ) && 
+					( _mm_movemask_ps( _mm_cmpge_ps( finalTest, Math::zero )  ) & ( VERT_Z  ) ) == ( VERT_Z  ) ) )
+					
 				{
 					WriteBuffer(buffer,planeForZInterpolation,planesForNormalsInterpolation,(unsigned int)x,(unsigned int)y);
 				}
@@ -465,11 +488,16 @@ public:
 
 	void WriteBuffer(FramebufferBase* buffer, Math::Vector4 &zPlane, Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
-		Math::Vector4 toAssignToPixel = Math::zero;
+		Math::Vector4 toAssignToPixelBary = Math::zero,toAssignToPixel = Math::zero;
+		Math::Vector4 normalPlaneTemp[3]; //FUCKKKKKKK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
 		//in triangle or on line of one triangle
 		Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();
 
+#if BARYCENTRIC
+		//Barycentric is more accurate but more expensive
 		//TESTING- BARYCENTRIC
 		Math::Vector4 localVert0, localVert1, localVert2, localVert3;
 		localVert0=normals[0];
@@ -481,16 +509,17 @@ public:
 		localVert0 = _mm_mul_ps(localVert0,localVert3);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,0,0));
+		toAssignToPixelBary = _mm_insert_ps(toAssignToPixelBary,localVert0,_MM_MK_INSERTPS_NDX(0,0,0));
 		localVert0 = _mm_mul_ps(localVert1,localVert3);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,1,0));
+		toAssignToPixelBary = _mm_insert_ps(toAssignToPixelBary,localVert0,_MM_MK_INSERTPS_NDX(0,1,0));
 		localVert0 = _mm_mul_ps(localVert2,localVert3);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
 		localVert0 = _mm_hadd_ps(localVert0,localVert0);
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,localVert0,_MM_MK_INSERTPS_NDX(0,2,0));
+		toAssignToPixelBary = _mm_insert_ps(toAssignToPixelBary,localVert0,_MM_MK_INSERTPS_NDX(0,2,0));
 		////////////////////////////////////////////////////TESTING///////////////////////////////////
+#endif
 
 		//Interpolate z
 		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
@@ -500,23 +529,20 @@ public:
 		zPlane = _mm_hadd_ps(zPlane,zPlane); //lowest order word has interpolated z value
 		_mm_store_ss(&pixel->z, zPlane);
 
-#if 0 
-		
-		normalPlane[0] = _mm_mul_ps(originalCoords,normalPlane[0]);
-		normalPlane[0] = _mm_hadd_ps(normalPlane[0],normalPlane[0]);
-		normalPlane[0] = _mm_hadd_ps(normalPlane[0],normalPlane[0]); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[0],_MM_MK_INSERTPS_NDX(0,0,0));
-		normalPlane[1] = _mm_mul_ps(originalCoords,normalPlane[1]);
-		normalPlane[1] = _mm_hadd_ps(normalPlane[1],normalPlane[1]);
-		normalPlane[1] = _mm_hadd_ps(normalPlane[1],normalPlane[1]); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[1],_MM_MK_INSERTPS_NDX(0,1,0));
-		normalPlane[2] = _mm_mul_ps(originalCoords,normalPlane[2]);
-		normalPlane[2] = _mm_hadd_ps(normalPlane[2],normalPlane[2]);
-		normalPlane[2] = _mm_hadd_ps(normalPlane[2],normalPlane[2]); //lowest order word has interpolated normal x value
-		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlane[2],_MM_MK_INSERTPS_NDX(0,2,0));
-#endif
-
+		normalPlaneTemp[0] = _mm_mul_ps(originalCoords,normalPlane[0]);
+		normalPlaneTemp[0] = _mm_hadd_ps(normalPlaneTemp[0],normalPlaneTemp[0]);
+		normalPlaneTemp[0] = _mm_hadd_ps(normalPlaneTemp[0],normalPlaneTemp[0]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[0],_MM_MK_INSERTPS_NDX(0,0,0));
+		normalPlaneTemp[1] = _mm_mul_ps(originalCoords,normalPlane[1]);
+		normalPlaneTemp[1] = _mm_hadd_ps(normalPlaneTemp[1],normalPlaneTemp[1]);
+		normalPlaneTemp[1] = _mm_hadd_ps(normalPlaneTemp[1],normalPlaneTemp[1]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[1],_MM_MK_INSERTPS_NDX(0,1,0));
+		normalPlaneTemp[2] = _mm_mul_ps(originalCoords,normalPlane[2]);
+		normalPlaneTemp[2] = _mm_hadd_ps(normalPlaneTemp[2],normalPlaneTemp[2]);
+		normalPlaneTemp[2] = _mm_hadd_ps(normalPlaneTemp[2],normalPlaneTemp[2]); //lowest order word has interpolated normal x value
+		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[2],_MM_MK_INSERTPS_NDX(0,2,0));
 		Math::Normalize(toAssignToPixel);
+
 		pixel->PutData(std::forward<Math::Vector4 >(toAssignToPixel));
 		//pixel->PutData(toAssignToPixel);
 		buffer->PutPixel(pixel,(unsigned int) x, (unsigned int) y);
@@ -545,6 +571,7 @@ private:
 	DataType modelSpaceNormals[3];
 	DataType vertices[3];
 	DataType normals[3];
+	Math::Vector4 interpolationCoef;
 	unsigned short currentNumberVertices;
 	PipelineBase* pipeline;
 };

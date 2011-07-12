@@ -159,18 +159,15 @@ public:
 			buffer[ y * xDim + x ] = (Pixel<Intensity,Depth>*)pixel;
 			return;
 		}
-
-		Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];
-
-		if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
+		if( buffer[ y * xDim + x ] )
 		{
-			delete oldVal;
+			Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];
+
+			if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
+			{
+				delete oldVal;
+			}
 		}
-		/*if( ((Pixel<Intensity,Depth,4>*)pixel)->z < buffer[ y * xDim + x ].z )
-		{
-			++pixelsPassedZTest;
-			buffer[ y * xDim + x ] = *((Pixel<Intensity,Depth>*)pixel);
-		}*/
 	}
 
 	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
@@ -181,12 +178,14 @@ public:
 			buffer[ val ] = (Pixel<Intensity,Depth>*)pixel;
 			return;
 		}
-
-		Pixel<Intensity,Depth,4>* oldVal = buffer[ val ];
-
-		if( InterlockedZBufferExchange(&buffer[ val ],(Pixel<Intensity,Depth,4>*)pixel) )
+		if( buffer[ val ] )
 		{
-			delete oldVal;
+			Pixel<Intensity,Depth,4>* oldVal = buffer[ val ];
+
+			if( InterlockedZBufferExchange(&buffer[ val ],(Pixel<Intensity,Depth,4>*)pixel) )
+			{
+				delete oldVal;
+			}
 		}
 	}
 
@@ -196,9 +195,9 @@ public:
 		bufferToDisplay = new char[bufferSize * 3];
 		for(unsigned int i = 0, j = -1; i < bufferSize; ++i)
 		{
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[RED]);
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[GREEN]);
-			bufferToDisplay[++j] = (char) (0xFFFFFFFF & buffer[i]->color[BLUE]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[BLUE]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[GREEN]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[RED]);
 		}
 		return bufferToDisplay;
 	}

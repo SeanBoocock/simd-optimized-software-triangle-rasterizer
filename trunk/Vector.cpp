@@ -2,6 +2,7 @@
 #include "Vector.h"
 
 
+
 namespace Math
 {
 
@@ -52,14 +53,15 @@ namespace Math
 
 	inline void Normalize(Vector4 &vec) //Not dealing with last component
 	{
-		Vector4 temp,temp2,temp3;
+		if( ( _mm_movemask_ps( _mm_cmpeq_ps( vec, Math::zero )  ) & (VERT_X | VERT_Y | VERT_Z)  ) ==  (VERT_X | VERT_Y | VERT_Z)  )
+			return;
+		Vector4 temp;
 		temp = _mm_mul_ps(vec,vec);
-		temp2 = _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(0, 0, 0, 0));
-		temp3 = _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(1, 1, 1, 1));
-		temp = _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(2, 2, 2, 2));
-		temp2 = _mm_add_ps(temp2,temp3);
-		temp = _mm_add_ps(temp,temp2);
-		temp = _mm_rsqrt_ps(temp);
+		temp = _mm_insert_ps(temp,Math::zero,_MM_MK_INSERTPS_NDX(3,3,0));
+		temp = _mm_hadd_ps(temp,temp);
+		temp = _mm_hadd_ps(temp,temp);
+		temp = _mm_insert_ps(temp,Math::ident,_MM_MK_INSERTPS_NDX(3,3,0));
+		temp = _mm_rsqrt_ps(temp); 
 		vec = _mm_mul_ps(vec,temp);
 	}
 
