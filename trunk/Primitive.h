@@ -272,15 +272,7 @@ public:
 
 	void GenerateBarycentric(Math::Vector4 &output, const unsigned int &x, const unsigned int &y )
 	{
-		/*
-		GzCoord barycentricCoord = {0.0,0.0,0.0};
-	float determinant = (vertices[0][0] - vertices[2][0])*(vertices[1][1] - vertices[2][1])
-		-(vertices[0][1] - vertices[2][1])*(vertices[1][0] - vertices[2][0]);
 
-	v[0].z * barycentricCoord[0] = ((vertices[1][1]-vertices[2][1])*(x - vertices[2][0])+(vertices[2][0]-vertices[1][0])*(y-vertices[2][1]))/determinant;
-	v[1].z * barycentricCoord[1] = ((vertices[2][1]-vertices[0][1])*(x - vertices[2][0])+(vertices[0][0]-vertices[2][0])*(y-vertices[2][1]))/determinant;
-	v[2].z * barycentricCoord[2] = 1 - barycentricCoord[0] - barycentricCoord[1];
-		*/
 		Math::Vector4 temp = _mm_sub_ps(vertices[0],vertices[2]);//{ (vertices[0][0] - vertices[2][0]),(vertices[0][1] - vertices[2][1])
 		Math::Vector4 temp1 = _mm_sub_ps(vertices[1],vertices[2]);
 		temp1 =  _mm_shuffle_ps(temp1, temp1, _MM_SHUFFLE(3, 3, 0, 1));//{(vertices[1][1] - vertices[2][1]),(vertices[1][0] - vertices[2][0])
@@ -431,12 +423,7 @@ public:
 		normalInputs[1] = _mm_insert_ps(vertices[1],normals[1],_MM_MK_INSERTPS_NDX(2,2,0));
 		normalInputs[2] = _mm_insert_ps(vertices[2],normals[2],_MM_MK_INSERTPS_NDX(2,2,0));
 		GenerateInterpolationPlane(planesForNormalsInterpolation[2],normalInputs[0],normalInputs[1],normalInputs[2]);
-		/*for(int j = 0; j < 3; ++j)
-		{
-			for(int i = 0; i < 3; ++i)
-				normalInputs[i] = _mm_insert_ps(vertices[i],normals[i],_MM_MK_INSERTPS_NDX(j,2,0));
-			GenerateInterpolationPlane(planesForNormalsInterpolation[j],normalInputs[0],normalInputs[1],normalInputs[2]);
-		}*/
+
 		GenerateInterpolationPlane(planeForZInterpolation,vertices[0],vertices[1],vertices[2]);
 		//GenerateInterpolationPlane(planesForNormalsInterpolation,normals[0],normals[1],normals[2]);
 		/*
@@ -486,7 +473,7 @@ public:
 		}
 	}
 
-	void WriteBuffer(FramebufferBase* buffer, Math::Vector4 &zPlane, Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
+	void WriteBuffer(FramebufferBase* buffer,const Math::Vector4 &zPlane,const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
 		Math::Vector4 toAssignToPixelBary = Math::zero,toAssignToPixel = Math::zero;
 		Math::Vector4 normalPlaneTemp[3]; //FUCKKKKKKK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -520,26 +507,19 @@ public:
 		toAssignToPixelBary = _mm_insert_ps(toAssignToPixelBary,localVert0,_MM_MK_INSERTPS_NDX(0,2,0));
 		////////////////////////////////////////////////////TESTING///////////////////////////////////
 #endif
-
+		int teeest = 0;
 		//Interpolate z
 		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
+		Math::Vector4 localZ,temp1;
 		Math::Vector4 originalCoords = Math::LoadVector4Aligned(loadCoords);
-		zPlane = _mm_mul_ps(originalCoords,zPlane);
-		zPlane = _mm_hadd_ps(zPlane,zPlane);
-		zPlane = _mm_hadd_ps(zPlane,zPlane); //lowest order word has interpolated z value
-		_mm_store_ss(&pixel->z, zPlane);
+		localZ = Math::Vec3DotVec3(originalCoords,zPlane);
+		_mm_store_ss(&pixel->z, localZ);
 
-		normalPlaneTemp[0] = _mm_mul_ps(originalCoords,normalPlane[0]);
-		normalPlaneTemp[0] = _mm_hadd_ps(normalPlaneTemp[0],normalPlaneTemp[0]);
-		normalPlaneTemp[0] = _mm_hadd_ps(normalPlaneTemp[0],normalPlaneTemp[0]); //lowest order word has interpolated normal x value
+		normalPlaneTemp[0] = Math::Vec3DotVec3(originalCoords,normalPlane[0]);
 		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[0],_MM_MK_INSERTPS_NDX(0,0,0));
-		normalPlaneTemp[1] = _mm_mul_ps(originalCoords,normalPlane[1]);
-		normalPlaneTemp[1] = _mm_hadd_ps(normalPlaneTemp[1],normalPlaneTemp[1]);
-		normalPlaneTemp[1] = _mm_hadd_ps(normalPlaneTemp[1],normalPlaneTemp[1]); //lowest order word has interpolated normal x value
+		normalPlaneTemp[1] = Math::Vec3DotVec3(originalCoords,normalPlane[1]);
 		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[1],_MM_MK_INSERTPS_NDX(0,1,0));
-		normalPlaneTemp[2] = _mm_mul_ps(originalCoords,normalPlane[2]);
-		normalPlaneTemp[2] = _mm_hadd_ps(normalPlaneTemp[2],normalPlaneTemp[2]);
-		normalPlaneTemp[2] = _mm_hadd_ps(normalPlaneTemp[2],normalPlaneTemp[2]); //lowest order word has interpolated normal x value
+		normalPlaneTemp[2] = Math::Vec3DotVec3(originalCoords,normalPlane[2]);
 		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[2],_MM_MK_INSERTPS_NDX(0,2,0));
 		Math::Normalize(toAssignToPixel);
 

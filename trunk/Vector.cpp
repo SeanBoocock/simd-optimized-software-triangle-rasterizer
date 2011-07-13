@@ -55,11 +55,8 @@ namespace Math
 	{
 		if( ( _mm_movemask_ps( _mm_cmpeq_ps( vec, Math::zero )  ) & (VERT_X | VERT_Y | VERT_Z)  ) ==  (VERT_X | VERT_Y | VERT_Z)  )
 			return;
-		Vector4 temp;
-		temp = _mm_mul_ps(vec,vec);
-		temp = _mm_insert_ps(temp,Math::zero,_MM_MK_INSERTPS_NDX(3,3,0));
-		temp = _mm_hadd_ps(temp,temp);
-		temp = _mm_hadd_ps(temp,temp);
+		Vector4 temp,temp2,temp3;
+		temp = Math::Vec3DotVec3(vec,vec);
 		temp = _mm_insert_ps(temp,Math::ident,_MM_MK_INSERTPS_NDX(3,3,0));
 		temp = _mm_rsqrt_ps(temp); 
 		vec = _mm_mul_ps(vec,temp);
