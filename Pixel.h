@@ -6,18 +6,22 @@
 #include <float.h>
 #include "Alignment.h"
 
-/*ALIGN_TO(32)*/ struct PixelBase
+struct PixelBase
 {
 	PixelBase()	: writtenTo(false)
 	{
 		Reset();
 	}
 	virtual ~PixelBase(){}
+	
 	virtual void Reset() {}
+
 	const bool IsWrittenTo() const
 	{
 		return writtenTo;
 	}
+
+	ALIGNED_NEW_P(64)
 
 	bool writtenTo;
 };
@@ -35,6 +39,8 @@ struct Pixel : PixelBase
 	{
 		//delete data;
 	}
+
+	ALIGNED_NEW_P(64)
 
 	void PutData(ColorComponentDepth&& incData)
 	{
@@ -74,6 +80,9 @@ struct Pixel<Intensity,Depth,4> : PixelBase
 	{
 		
 	}
+
+	ALIGNED_NEW_P(64)
+
 	void Reset()
 	{
 		color[RED] = (Intensity)250;

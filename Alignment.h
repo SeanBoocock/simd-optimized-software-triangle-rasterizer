@@ -21,5 +21,16 @@
 					_aligned_free(m);									\
 				}														
 
+#define ALIGNED_NEW_P(x)  void* operator new(size_t sz) throw (...)		\
+				{														\
+					void* m = _aligned_malloc(sz, x);	\
+					if (!m) throw std::bad_alloc();						\
+					return m;											\
+				}														\
+																		\
+				void operator delete(void* m)							\
+				{														\
+					_aligned_free(m);									\
+				}		
 
 #endif

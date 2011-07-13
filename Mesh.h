@@ -25,6 +25,228 @@ public:
 		buffer = new VertexBuffer(1000);
 	}
 
+	void LoadTestCube()
+	{
+		ALIGN float	vertexList[3][4];	/* vertex position coordinates */ 
+		ALIGN float	normalList[3][4];
+		Math::Vector4 rowsVerts[3],rowsNormals[3];
+		PrimitiveBase* toAdd;
+
+		vertexList[0][3] = 1.0f;
+		vertexList[1][3] = 1.0f;
+		vertexList[2][3] = 1.0f;
+
+		normalList[0][3] = 0.0f;
+		normalList[1][3] = 0.0f;
+		normalList[2][3] = 0.0f;
+
+	
+        // front
+        vertexList[0][0] = -0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = -0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 0.0f; normalList[0][2] =  1.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 0.0f; normalList[1][2] =  1.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 0.0f; normalList[2][2] =  1.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = 0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 0.0f; normalList[0][2] =  1.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 0.0f; normalList[1][2] =  1.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 0.0f; normalList[2][2] =  1.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = 0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 1.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 1.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 1.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = 0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = 0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 1.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 1.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 1.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = 0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = 0.5f; vertexList[1][1] = -0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 1.0f; normalList[0][1] = 0.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 1.0f; normalList[1][1] = 0.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 1.0f; normalList[2][1] = 0.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = 0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = 0.5f; vertexList[1][1] = -0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = 0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 1.0f; normalList[0][1] = 0.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 1.0f; normalList[1][1] = 0.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 1.0f; normalList[2][1] = 0.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = -0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = -0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 1.0f; normalList[0][1] = 0.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 1.0f; normalList[1][1] = 0.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 1.0f; normalList[2][1] = 0.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = -0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = 0.5f;
+		vertexList[2][0] = -0.5f; vertexList[2][1] = 0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 1.0f; normalList[0][1] = 0.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 1.0f; normalList[1][1] = 0.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 1.0f; normalList[2][1] = 0.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = -0.5f; vertexList[0][2] = 0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = -0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 1.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 1.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 1.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = -0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = 0.5f; vertexList[1][1] = -0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = 0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 1.0f; normalList[0][2] =  0.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 1.0f; normalList[1][2] =  0.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 1.0f; normalList[2][2] =  0.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = -0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = -0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 0.0f; normalList[0][2] =  1.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 0.0f; normalList[1][2] =  1.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 0.0f; normalList[2][2] =  1.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+
+		vertexList[0][0] = -0.5f; vertexList[0][1] = 0.5f; vertexList[0][2] = -0.5f;
+		vertexList[1][0] = 0.5f; vertexList[1][1] = 0.5f; vertexList[1][2] = -0.5f;
+		vertexList[2][0] = 0.5f; vertexList[2][1] = -0.5f; vertexList[2][2] = -0.5f;
+
+		normalList[0][0] = 0.0f; normalList[0][1] = 0.0f; normalList[0][2] =  1.0f;
+		normalList[1][0] = 0.0f; normalList[1][1] = 0.0f; normalList[1][2] =  1.0f;
+		normalList[2][0] = 0.0f; normalList[2][1] = 0.0f; normalList[2][2] =  1.0f;
+					
+		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
+		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
+		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
+		rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[0]);
+		rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[1]);
+		rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[2]);
+		toAdd = new Primitive<>(rowsVerts,rowsNormals);
+		buffer->PushBack(toAdd);
+	}
+
 	void LoadMesh()
 	{
 		ALIGN float	vertexList[3][4];	/* vertex position coordinates */ 

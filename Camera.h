@@ -34,10 +34,10 @@ enum CameraMatrices : unsigned short
 	NUM_MATRICES
 };
 
-#define DEFAULT_FOV_DEGREES 35
+#define DEFAULT_FOV_DEGREES 45
 #define DEFAULT_FOV DEFAULT_FOV_DEGREES*PI/180.0f
 #define DEFAULT_NEAR_PLANE .01f
-#define DEFAULT_FAR_PLANE 500.0f
+#define DEFAULT_FAR_PLANE 20.0f
 
 using namespace Math;
 
@@ -153,7 +153,7 @@ public:
 	{
 		ALIGN float screenMatrix[4][4] = {	{ xDim / 2.0f,	0.0f,			0.0f,					xDim / 2.0f },
 											{ 0.0f,			-yDim / 2.0f,	0.0f,					yDim / 2.0f },
-											{ 0.0f,			0.0f,			tan( fov / 2 ),0.0f		},
+											{ 0.0f,			0.0f,			farPlane*tan( fov / 2 ),0.0f		},
 											{ 0.0f,			0.0f,			0.0f,					1.0f		}};
 
 		if(replaceOnStack)

@@ -25,6 +25,7 @@ void SimpleEngine::Initialize()
 	
 
 	m.LoadMesh();
+	//m.LoadTestCube();
 
 	/*VertexBuffer* v = new VertexBuffer(1);
 	PrimitiveBase* triangle = new Primitive<>();
