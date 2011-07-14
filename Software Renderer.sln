@@ -3,14 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Software Renderer", "Software Renderer.vcxproj", "{826D0E64-B9D5-4755-B6B4-2D2C31AE0DCA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UnitTests", "..\UnitTests\UnitTests.vcxproj", "{44FE2E38-D590-48E4-8626-A1896A6978B6}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{03BB247D-BD30-48FD-AC6F-0192161F5D88}"
 	ProjectSection(SolutionItems) = preProject
 		Local.testsettings = Local.testsettings
 		Software Renderer.vsmdi = Software Renderer.vsmdi
 		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UnitTests", "..\UnitTests\UnitTests.vcxproj", "{7250C806-F8A4-4D8F-841C-DB725C7FE69F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gtest-md", "..\..\..\gTest\gtest-1.6.0\msvc\gtest-md.vcxproj", "{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}"
 EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
@@ -31,14 +33,18 @@ Global
 		{826D0E64-B9D5-4755-B6B4-2D2C31AE0DCA}.Release|Win32.Build.0 = Release|x64
 		{826D0E64-B9D5-4755-B6B4-2D2C31AE0DCA}.Release|x64.ActiveCfg = Release|x64
 		{826D0E64-B9D5-4755-B6B4-2D2C31AE0DCA}.Release|x64.Build.0 = Release|x64
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Debug|Win32.ActiveCfg = Debug|Win32
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Debug|Win32.Build.0 = Debug|Win32
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Debug|x64.ActiveCfg = Debug|x64
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Debug|x64.Build.0 = Debug|x64
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Release|Win32.ActiveCfg = Release|Win32
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Release|Win32.Build.0 = Release|Win32
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Release|x64.ActiveCfg = Release|x64
-		{44FE2E38-D590-48E4-8626-A1896A6978B6}.Release|x64.Build.0 = Release|x64
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Debug|Win32.Build.0 = Debug|Win32
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Debug|x64.ActiveCfg = Debug|Win32
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Release|Win32.ActiveCfg = Release|Win32
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Release|Win32.Build.0 = Release|Win32
+		{7250C806-F8A4-4D8F-841C-DB725C7FE69F}.Release|x64.ActiveCfg = Release|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Debug|Win32.Build.0 = Debug|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Debug|x64.ActiveCfg = Debug|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Release|Win32.ActiveCfg = Release|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Release|Win32.Build.0 = Release|Win32
+		{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

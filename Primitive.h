@@ -510,7 +510,7 @@ public:
 		int teeest = 0;
 		//Interpolate z
 		ALIGN float loadCoords[4] = { (float)x, 1.0f,  (float)y, 0.0f };
-		Math::Vector4 localZ,temp1;
+		Math::Vector4 localZ;
 		Math::Vector4 originalCoords = Math::LoadVector4Aligned(loadCoords);
 		localZ = Math::Vec3DotVec3(originalCoords,zPlane);
 		_mm_store_ss(&pixel->z, localZ);

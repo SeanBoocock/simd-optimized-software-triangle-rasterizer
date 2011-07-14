@@ -23,6 +23,7 @@ public:
 																yDim(yDimension)
 	{
 		buffer = new BufferOf*[bufferSize = xDim * yDim];
+		InitializeSRWLock(&zLock);
 		for(unsigned int i = 0; i < bufferSize; ++i)
 			buffer[i] = new BufferOf();
 	}
@@ -55,11 +56,20 @@ public:
 		}
 		
 		BufferOf* oldVal = buffer[ y * xDim + x ];
-
-		if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(BufferOf*)pixel) )
+		if(static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel)->z < static_cast<Pixel<Math::Vector4,Depth,1>*>(oldVal)->z)
+		{
+			AcquireSRWLockExclusive(&zLock);
+			if(static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel)->z < static_cast<Pixel<Math::Vector4,Depth,1>*>(oldVal)->z)
+			{
+				delete oldVal;
+				buffer[ y * xDim + x ] = static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel);
+			}
+			ReleaseSRWLockExclusive(&zLock);
+		}
+		/*if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(BufferOf*)pixel) )
 		{
 			delete oldVal;
-		}
+		}*/
 	}
 
 	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
@@ -115,6 +125,7 @@ private:
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;
+	SRWLOCK zLock;
 };
 
 template<typename ColorComponentDepth, typename zDepth>

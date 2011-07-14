@@ -6,6 +6,9 @@
 #include "VertexBuffer.h"
 #include "Primitive.h"
 #include "MatrixStack.h"
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
 
 Renderer::Renderer()	:	camera(nullptr),
 							vertexBuffer(nullptr),
@@ -34,9 +37,9 @@ Renderer::Renderer()	:	camera(nullptr),
 	ALIGN float lightTemp3[4] = {0.9f, 0.2f, 0.3f, 0.0f};
 	lights[1].lightColor = Math::LoadVector4Aligned(lightTemp3);//directions
 	ALIGN float lightTemp4[4] = {0.7071f, 0.0f, -0.7071f, 0.0f};
-	lights[2].lightDir = Math::LoadVector4Aligned(lightTemp2);//directions
+	lights[2].lightDir = Math::LoadVector4Aligned(lightTemp4);//directions
 	ALIGN float lightTemp5[4] = {0.2f, 0.7f, 0.3f, 0.0f};
-	lights[2].lightColor = Math::LoadVector4Aligned(lightTemp3);//directions
+	lights[2].lightColor = Math::LoadVector4Aligned(lightTemp5);//directions
 
 	ambientLight.lightDir = Math::zero; //color value
 	ALIGN float lightTemp6[4] = {0.3f, 0.3f, 0.3f, 0.0f};
@@ -95,10 +98,16 @@ RenderTarget* Renderer::Draw()
 		return nullptr;
 	}
 
+
 	for(unsigned int primitive = 0; primitive < vertexBuffer->Size(); ++primitive)
 	{
 		vertexBuffer->At(primitive)->ExecutePipeline();
 	}
+
+	/*tbb::parallel_for(0,(int)vertexBuffer->Size(),[&](int primitive)
+	{
+		vertexBuffer->At(primitive)->ExecutePipeline();
+	});*/
 
 	//after all meshes drawn, do shading for all pixels drawn in depth buffer
 	result |= Shader();
@@ -208,7 +217,7 @@ unsigned int Renderer::Shader()
 	unsigned int xDim = gBuffers[0]->GetWidth();
 	unsigned int yDim = gBuffers[0]->GetHeight();
 
-	Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor;
+	Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor,temp,temp2;
 
 	Math::Vector4 texture = Math::ident;
 
@@ -225,22 +234,20 @@ unsigned int Renderer::Shader()
 
 			for(int i = 0; i < numLights; ++i) // 2 = num lights for now
 			{
-				unsigned int compare1,compare2;
+				bool compare1,compare2;
 				normal = origNormal;
 				nDotL = Math::Vec3DotVec3(lights[i].lightDir,normal);
 				nDotE = _mm_mul_ps(negate,normal);
-				/*if( ( ( compare1 = ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ^ ( compare2 = ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ) == 0 )
-				*/
-				if( ( ( compare1 = ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) && ( compare2 = ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) ) ||
-					( ( ( ( _mm_movemask_ps( _mm_cmplt_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) && ( ( ( _mm_movemask_ps( _mm_cmpge_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z ) ) )
-					)
-				
+				nDotE = _mm_shuffle_ps(nDotE, nDotE, _MM_SHUFFLE(2, 2, 2, 2));
+				compare1 = ( _mm_movemask_ps( _mm_cmpge_ps( nDotL, Math::zero )  ) & VERT_Z ) == VERT_Z;
+				compare2 = ( _mm_movemask_ps( _mm_cmplt_ps( nDotE, Math::zero )  ) & VERT_Z ) == VERT_Z;
+				if(compare1 ^ compare2) 
 				{
 					//light is on opposite side of the surface, thus different signs (xor == 0) thus we skip
 					++skipped;
 					continue;
 				}
-				if( compare1 == 1 && compare2 == 0 ) //both values were negative
+				if( compare1 == false && compare2 == true ) //both values were negative
 				{
 					nDotL = _mm_mul_ps(negate,nDotL);
 					nDotE = _mm_mul_ps(negate,nDotE);
@@ -257,8 +264,15 @@ unsigned int Renderer::Shader()
 
 				if(shadeMode == PHONG)
 				{
-					computedColor = _mm_add_ps(computedColor, _mm_add_ps( _mm_mul_ps( _mm_mul_ps(specCoefficient,lights[i].lightColor), CalculateSpecPower(rDotE) ), _mm_mul_ps(diffuseCoefficient, _mm_mul_ps( lights[i].lightColor, nDotL ) ) ) );
-					computedColor = _mm_add_ps( computedColor, _mm_mul_ps( ambientCoefficient, ambientLight.lightColor ) );
+					//Specular calc
+					temp = _mm_mul_ps(lights[i].lightColor,CalculateSpecPower(rDotE));
+					temp = _mm_mul_ps(temp,specCoefficient);
+					//Diffuse calc
+					temp2 = _mm_mul_ps(diffuseCoefficient,lights[i].lightColor);
+					temp2 = _mm_mul_ps(temp2,nDotL);
+					//Combine terms
+					temp = _mm_add_ps(temp,temp2);
+					computedColor = _mm_add_ps(computedColor, temp);
 				}
 				else if (shadeMode == GOURAUD)
 				{
@@ -268,26 +282,28 @@ unsigned int Renderer::Shader()
 			} // for lights
 			if(skipped < numLights)
 			{
+				//Calculate ambient term and add it
+				computedColor = _mm_add_ps( computedColor, _mm_mul_ps( ambientCoefficient, ambientLight.lightColor ) );
+
 				//With color computed, get ready to store it
 				//TESTING JUST WITH NORMALS
-				computedColor = _mm_mul_ps(colorScale,origNormal);
-				/*computedColor = _mm_mul_ps(colorScale,computedColor);*/
+				/*computedColor = _mm_mul_ps(colorScale,origNormal);*/
+				computedColor = _mm_mul_ps(colorScale,computedColor);
+				computedColor = _mm_mul_ps(negate,computedColor);
 				Pixel<>* pixel = new Pixel<>();
-				ALIGN float tempColor[4] = { 255, 0, 0, 0 };
+				ALIGN float tempColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f};
 				_mm_store_ps(tempColor,computedColor);
 				for(int i = 0; i < 3; ++i)
 					pixel->color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
-					//pixel->color[i]=TESTING[i];
 				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
 			}
 			else
 			{
-				Pixel<>* pixel = new Pixel<>();
+				/*Pixel<>* pixel = new Pixel<>();
 				unsigned short TESTING[4] = { 255, 0, 0, 0 };
 				for(int i = 0; i < 3; ++i)
-					//pixel->color[i] = (short)((int)(tempColor[i] * ((1 << 12) - 1)));
 					pixel->color[i]=TESTING[i];
-				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
+				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);*/
 			}
 		}// if(localBuf->GetPixel(val)->IsWrittenTo()
 	}// for(unsigned int val = 0; val < xDim*yDim; ++val)

@@ -27,6 +27,13 @@ public:
 		return (end.QuadPart - start.QuadPart) * 1000000.0 / frequency.QuadPart;
 	}
 
+	double getMilliseconds()
+	{
+		LARGE_INTEGER end;
+		QueryPerformanceCounter(&end);
+		return (double)(end.QuadPart - start.QuadPart) * 1000.0 / (double)frequency.QuadPart;
+	}
+
 	double getSeconds()
 	{
 		LARGE_INTEGER end;
