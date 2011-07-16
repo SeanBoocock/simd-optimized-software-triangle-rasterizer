@@ -6,15 +6,22 @@
 #include "Singleton.h"
 #include "Vector.h"
 #include "Alignment.h"
+#include "FrameBuffer.h"
+#include "PrimitiveBase.h"
+#include "RenderTarget.h"
+#include "ErrorHandling.h"
+#include "Camera.h"
 
-class MatrixStackBase;
-class Camera;
-class Buffer;
-class FramebufferBase;
-class RenderTarget;
-class PrimitiveBase;
+#include "MatrixStack.h"
+
+
+class VertexBuffer;
+//class MatrixStackBase;
+//class Camera;
+//class RenderTarget;
 
 #define numLights 3
+#define NUMBER_G_BUFFERS 1
 
 enum ShaderMode	: unsigned short
 {
@@ -48,7 +55,7 @@ public:
 
 	void SetCamera(Camera* incCamera);
 
-	void SubmitVertexBuffer(Buffer* buf);
+	void SubmitVertexBuffer(VertexBuffer* buf);
 
 	unsigned int TransformVertices(PrimitiveBase* primitive);
 
@@ -76,7 +83,7 @@ private:
 
 	Camera* camera;
 	MatrixStackBase* renderStack;
-	Buffer* vertexBuffer;
+	VertexBuffer* vertexBuffer;
 
 	//clipping to view frustrum in screen space
 	Math::Vector4 clipMin;
@@ -84,10 +91,10 @@ private:
 
 	unsigned short numTargets;
 	unsigned short currentTarget;
-	RenderTarget** targets; //back and front
+	RenderTarget* targets; //back and front
 
 	unsigned short numGBuffers;
-	FramebufferBase** gBuffers; //intermediate buffers before final shading
+	FrameBuffer< Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth > gBuffers[NUMBER_G_BUFFERS]; //intermediate buffers before final shading
 
 	//TEMPORARY LIGHTS/Shader constants
 	Light lights[numLights];//directions
@@ -95,7 +102,6 @@ private:
 	int specularPower;
 	Math::Vector4 CalculateSpecPower(const Math::Vector4& toPower);
 	Math::Vector4 specCoefficient;
-
 	Math::Vector4 diffuseCoefficient;
 	Math::Vector4 ambientCoefficient;
 	ShaderMode shadeMode;

@@ -16,16 +16,15 @@ template<typename BufferOf = Pixel<Intensity,Depth>, typename ColorComponentDept
 class FrameBuffer	:	public FramebufferBase
 {
 public:
-	
-	
+
 	FrameBuffer(unsigned int xDimension = DEFAULT_WIDTH,
 				unsigned int yDimension = DEFAULT_HEIGHT)	:	xDim(xDimension),
 																yDim(yDimension)
 	{
-		buffer = new BufferOf*[bufferSize = xDim * yDim];
+		buffer = new BufferOf[bufferSize = xDim * yDim];
 		InitializeSRWLock(&zLock);
-		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i] = new BufferOf();
+		/*for(unsigned int i = 0; i < bufferSize; ++i)
+			buffer[i] = new BufferOf();*/
 	}
 
 	~FrameBuffer()
@@ -46,23 +45,23 @@ public:
 		return (float) yDim;
 	}
 
-	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y, bool directWrite = false)
+	void PutPixel(BufferOf&& pixel, unsigned int x, unsigned int y, bool directWrite = false)
 	{
 		if(directWrite)
 		{
-			delete buffer[ y * xDim + x ];
-			buffer[ y * xDim + x ] = static_cast<BufferOf*>(pixel);
+			/*delete buffer[ y * xDim + x ];*/
+			buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 			return;
 		}
 		
-		BufferOf* oldVal = buffer[ y * xDim + x ];
-		if(static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel)->z < static_cast<Pixel<Math::Vector4,Depth,1>*>(oldVal)->z)
+		/*BufferOf* oldVal = buffer[ y * xDim + x ];*/
+		if(pixel.z < buffer[ y * xDim + x ].z)
 		{
 			AcquireSRWLockExclusive(&zLock);
-			if(static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel)->z < static_cast<Pixel<Math::Vector4,Depth,1>*>(oldVal)->z)
+			if(pixel.z < buffer[ y * xDim + x ].z)
 			{
-				delete oldVal;
-				buffer[ y * xDim + x ] = static_cast<Pixel<Math::Vector4,Depth,1>*>(pixel);
+				/*delete oldVal;*/
+				buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 			}
 			ReleaseSRWLockExclusive(&zLock);
 		}
@@ -72,29 +71,40 @@ public:
 		}*/
 	}
 
-	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
+	void PutPixel(BufferOf&& pixel, unsigned int val, bool directWrite = false)
 	{
 		if(directWrite)
 		{
-			delete buffer[ val ];
-			buffer[ val ] = static_cast<BufferOf*>(pixel);
+			/*delete buffer[ val ];*/
+			buffer[ val ] = std::forward<BufferOf>(pixel);
 			return;
 		}
 		
-		BufferOf* oldVal = buffer[ val ];
+		if(pixel.z < buffer[ val ].z)
+		{
+			AcquireSRWLockExclusive(&zLock);
+			if(pixel.z < buffer[ val ].z)
+			{
+				/*delete oldVal;*/
+				buffer[ val ] = std::forward<BufferOf>(pixel);
+			}
+			ReleaseSRWLockExclusive(&zLock);
+		}
+
+	/*	BufferOf* oldVal = buffer[ val ];
 
 		if( InterlockedZBufferExchange(&buffer[ val ],(BufferOf*)pixel) )
 		{
 			delete oldVal;
-		}
+		}*/
 	}
 
-	const PixelBase* GetPixel(unsigned int x, unsigned int y)
+	const BufferOf GetPixel(unsigned int x, unsigned int y)
 	{
 		return buffer[ y * xDim + x ];
 	}
 
-	const PixelBase* GetPixel(unsigned int val)
+	const BufferOf GetPixel(unsigned int val)
 	{
 		return buffer[ val ];
 	}
@@ -112,7 +122,7 @@ public:
 	void Reset()
 	{
 		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i]->Reset();
+			buffer[i].Reset();
 	}
 
 	void Resize(int xDim, int yDim)
@@ -121,7 +131,7 @@ public:
 	}
 
 private:
-	BufferOf** buffer;
+	BufferOf* buffer;
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;
@@ -133,15 +143,15 @@ class FrameBuffer<Pixel<Intensity,Depth>, ColorComponentDepth, zDepth>	:	public 
 {
 public:
 	
-	
 	FrameBuffer(unsigned int xDimension = DEFAULT_WIDTH,
 				unsigned int yDimension = DEFAULT_HEIGHT)	:	xDim(xDimension),
 																yDim(yDimension),
 																bufferToDisplay(nullptr)
 	{
-		buffer = new Pixel<Intensity,Depth>*[bufferSize = xDim * yDim];
-		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i] = new Pixel<Intensity,Depth>();
+		buffer = new Pixel<Intensity,Depth>[bufferSize = xDim * yDim];
+		/*for(unsigned int i = 0; i < bufferSize; ++i)
+			buffer[i] = new Pixel<Intensity,Depth>();*/
+		InitializeSRWLock(&zLock);
 	}
 
 	~FrameBuffer()
@@ -162,34 +172,57 @@ public:
 		return (float) yDim;
 	}
 
-	void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y, bool directWrite = false)
+	void PutPixel(Pixel<Intensity,Depth>&& pixel, unsigned int x, unsigned int y, bool directWrite = false)
 	{
 		if(directWrite)
 		{
-			delete buffer[ y * xDim + x ];
-			buffer[ y * xDim + x ] = (Pixel<Intensity,Depth>*)pixel;
+			/*delete buffer[ y * xDim + x ];*/
+			buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 			return;
 		}
-		if( buffer[ y * xDim + x ] )
-		{
-			Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];
 
-			if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
+		if(pixel.z < buffer[ y * xDim + x ].z)
+		{
+			AcquireSRWLockExclusive(&zLock);
+			if(pixel.z < buffer[ y * xDim + x ].z)
 			{
-				delete oldVal;
+				/*delete oldVal;*/
+				buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 			}
+			ReleaseSRWLockExclusive(&zLock);
 		}
+
+		//if( buffer[ y * xDim + x ] )
+		//{
+		//	/*Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];*/
+
+		//	if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
+		//	{
+		//		/*delete oldVal;*/
+		//	}
+		//}
 	}
 
-	void PutPixel(PixelBase* pixel, unsigned int val, bool directWrite = false)
+	void PutPixel(Pixel<Intensity,Depth>&& pixel, unsigned int val, bool directWrite = false)
 	{
 		if(directWrite)
 		{
-			delete buffer[ val ];
-			buffer[ val ] = (Pixel<Intensity,Depth>*)pixel;
+			/*delete buffer[ val ];*/
+			buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 			return;
 		}
-		if( buffer[ val ] )
+		if(pixel.z < buffer[ val ].z)
+		{
+			AcquireSRWLockExclusive(&zLock);
+			if(pixel.z < buffer[ val ].z)
+			{
+				/*delete oldVal;*/
+				buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
+			}
+			ReleaseSRWLockExclusive(&zLock);
+		}
+
+		/*if( buffer[ val ] )
 		{
 			Pixel<Intensity,Depth,4>* oldVal = buffer[ val ];
 
@@ -197,7 +230,7 @@ public:
 			{
 				delete oldVal;
 			}
-		}
+		}*/
 	}
 
 	//PARALLEL: can use parallel for here ot do this
@@ -206,9 +239,9 @@ public:
 		bufferToDisplay = new char[bufferSize * 3];
 		for(unsigned int i = 0, j = -1; i < bufferSize; ++i)
 		{
-			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[BLUE]);
-			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[GREEN]);
-			bufferToDisplay[++j] = (unsigned char) (buffer[i]->color[RED]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i].color[BLUE]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i].color[GREEN]);
+			bufferToDisplay[++j] = (unsigned char) (buffer[i].color[RED]);
 		}
 		return bufferToDisplay;
 	}
@@ -221,7 +254,7 @@ public:
 	void Reset()
 	{
 		for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i]->Reset();
+			buffer[i].Reset();
 	}
 
 	void Resize(int xDim, int yDim)
@@ -230,11 +263,12 @@ public:
 	}
 
 private:
-	Pixel<Intensity,Depth,4>** buffer;
+	Pixel<Intensity,Depth>* buffer;
 	unsigned int bufferSize;
 	unsigned int xDim;
 	unsigned int yDim;
 	char* bufferToDisplay;
+	SRWLOCK zLock;
 };
 
 #endif

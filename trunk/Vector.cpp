@@ -78,6 +78,18 @@ namespace Math
 		return _mm_load_ps(inArray);
 	}
 
+	inline Vector4 Floor(const Vector4 &vec)
+	{
+		__m128i tempInt = _mm_cvttps_epi32(vec);
+		return _mm_cvtepi32_ps(tempInt);
+	}
+
+	inline void ModF(const Vector4 &vec, Vector4 &floorOut, Vector4 &fractionalOut)
+	{
+		floorOut = Floor(vec);
+		fractionalOut = _mm_sub_ps(vec,floorOut);
+	}
+
 	Vector4 operator+ (Vector4 in)	{	return in;	}
 	Vector4 operator+ (Vector4 in, Vector4 inTwo)	{	return _mm_add_ps(in,inTwo); }
 	Vector4 operator- (Vector4 in)	{	return _mm_mul_ps(in, Math::negate); }

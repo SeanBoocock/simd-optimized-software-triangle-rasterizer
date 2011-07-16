@@ -1,27 +1,20 @@
 
 #include "Renderer.h"
-#include "RenderTarget.h"
-#include "ErrorHandling.h"
-#include "Camera.h"
 #include "VertexBuffer.h"
 #include "Primitive.h"
-#include "MatrixStack.h"
+//#include "Texture.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 
 
 Renderer::Renderer()	:	camera(nullptr),
-							vertexBuffer(nullptr),
 							numTargets(2),
 							currentTarget(0),
 							numGBuffers(1),
-							gBuffers(nullptr),
 							shadeMode(PHONG)
 {
 	
-	targets = new RenderTarget*[numTargets];
-	for(unsigned int i = 0; i < numTargets; ++i)
-		targets[i] = new RenderTarget();
+	targets = new RenderTarget[numTargets];
 	camera = new Camera();
 
 	renderStack = new MatrixStack<RenderMatrices,1>();
@@ -56,17 +49,17 @@ Renderer::Renderer()	:	camera(nullptr),
 	ambientCoefficient = Math::LoadVector4Aligned(ambCoef);
 
 	//This will double as z-buffer/interpolated normal for now
-	gBuffers = (FramebufferBase**) new FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>*[numGBuffers];
+	/*gBuffers = (FramebufferBase**) new FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>*[numGBuffers];
 	for(int i = 0; i < numGBuffers; ++i)
-		gBuffers[i] = new FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>();
+		gBuffers[i] = new FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>();*/
 }
 
 Renderer::~Renderer()
 {
-	for(unsigned int i = 0; i < numTargets; ++i)
-		delete targets[i];
+	/*for(unsigned int i = 0; i < numTargets; ++i)
+		delete targets[i];*/
 	delete targets;
-	if(gBuffers)	delete [] gBuffers;
+	/*if(gBuffers)	delete [] gBuffers;*/
 }
 
 HRESULT Renderer::Initialize()
@@ -80,8 +73,8 @@ RenderTarget* Renderer::Draw()
 	unsigned int result = RENDERER_SUCCESS;
 	
 	currentTarget = (++currentTarget < numTargets) ? currentTarget : 0;
-	targets[currentTarget]->GetBuffer()->Reset();
-	gBuffers[0]->Reset();
+	targets[currentTarget].GetBuffer()->Reset();
+	gBuffers[0].Reset();
 
 	//Setup matrix stack for this mesh
 	result |= InitializeMatricesForMesh();
@@ -99,15 +92,15 @@ RenderTarget* Renderer::Draw()
 	}
 
 
-	for(unsigned int primitive = 0; primitive < vertexBuffer->Size(); ++primitive)
+	/*for(unsigned int primitive = 0; primitive < vertexBuffer->Size(); ++primitive)
 	{
 		vertexBuffer->At(primitive)->ExecutePipeline();
-	}
+	}*/
 
-	/*tbb::parallel_for(0,(int)vertexBuffer->Size(),[&](int primitive)
+	tbb::parallel_for(0,(int)vertexBuffer->Size(),[&](int primitive)
 	{
 		vertexBuffer->At(primitive)->ExecutePipeline();
-	});*/
+	});
 
 	//after all meshes drawn, do shading for all pixels drawn in depth buffer
 	result |= Shader();
@@ -119,14 +112,14 @@ RenderTarget* Renderer::Draw()
 
 	renderStack->Pop();
 
-	return targets[currentTarget];
+	return &targets[currentTarget];
 }
 
 unsigned int Renderer::InitializeClippingLimits()
 {
 	/*ALIGN float min[4] = { 0.0f, 0.0f, camera->NearPlane(), 0.0f };*/
 	clipMin = Math::zero;
-	ALIGN float max[4] = { targets[currentTarget]->GetWidth(), targets[currentTarget]->GetHeight(), camera->FarPlane(), 1.0f };
+	ALIGN float max[4] = { targets[currentTarget].GetWidth(), targets[currentTarget].GetHeight(), camera->FarPlane(), 1.0f };
 	clipMax = Math::LoadVector4Aligned( max );
 	return RENDERER_SUCCESS;
 }
@@ -136,9 +129,9 @@ void Renderer::SetCamera(Camera* incCamera)
 	camera = (incCamera) ? incCamera : camera;
 }
 
-void Renderer::SubmitVertexBuffer(Buffer* buf)
+void Renderer::SubmitVertexBuffer(VertexBuffer* buf)
 {
-	vertexBuffer = (buf) ? buf : vertexBuffer;
+	vertexBuffer = (buf) ? buf : nullptr;
 }
 
 unsigned int Renderer::InitializeMatricesForMesh()
@@ -188,7 +181,7 @@ unsigned int Renderer::LEETest(PrimitiveBase* primitive)
 	//interpolate z at x,y coordinate
 	//
 	DEBUG_PRINT("Renderer executing LEETest(PrimitiveBase* primitive) for primitive: %d.\n", primitive->ID());
-	primitive->LEETest(gBuffers[0]);
+	static_cast<Primitive<>*>(primitive)->LEETest(gBuffers[0]);
 	//WriteGBuffer();
 	return RENDERER_SUCCESS;
 }
@@ -210,25 +203,25 @@ Math::Vector4 Renderer::CalculateSpecPower(const Math::Vector4& toPower)
 unsigned int Renderer::Shader()
 {
 	DEBUG_PRINT("Renderer executing Shader().\n");
-	FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>* localBuf = static_cast<FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>*>(gBuffers[0]);
+	/*FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>* localBuf = static_cast<FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>*>(gBuffers[0]);
+*/
+	Pixel<Math::Vector4,Depth,1> currentNormal;
 
-	Pixel<Math::Vector4,Depth,1>* currentNormal;
-
-	unsigned int xDim = gBuffers[0]->GetWidth();
-	unsigned int yDim = gBuffers[0]->GetHeight();
+	unsigned int xDim = gBuffers[0].GetWidth();
+	unsigned int yDim = gBuffers[0].GetHeight();
 
 	Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor,temp,temp2;
 
 	Math::Vector4 texture = Math::ident;
 
 	unsigned short skipped = 0;
-
 	for(unsigned int val = 0; val < xDim*yDim; ++val)
+	/*tbb::parallel_for(0,(int)(xDim*yDim),[&](int val)*/
 	{
-		if(localBuf->GetPixel(val)->IsWrittenTo()) //Pixel was updated during last frame
+		if(gBuffers[0].GetPixel(val).IsWrittenTo()) //Pixel was updated during last frame
 		{
-			currentNormal = (Pixel<Math::Vector4,Depth,1>*)const_cast<PixelBase*>(localBuf->GetPixel(val));
-			origNormal = currentNormal->data[0];
+			currentNormal = gBuffers[0].GetPixel(val);
+			origNormal = currentNormal.data[0];
 			computedColor = Math::zero;
 			skipped = 0;
 
@@ -280,7 +273,7 @@ unsigned int Renderer::Shader()
 					computedColor = _mm_add_ps( computedColor, ambientLight.lightColor );
 				}
 			} // for lights
-			if(skipped < numLights)
+			if(skipped <= numLights)
 			{
 				//Calculate ambient term and add it
 				computedColor = _mm_add_ps( computedColor, _mm_mul_ps( ambientCoefficient, ambientLight.lightColor ) );
@@ -290,12 +283,12 @@ unsigned int Renderer::Shader()
 				/*computedColor = _mm_mul_ps(colorScale,origNormal);*/
 				computedColor = _mm_mul_ps(colorScale,computedColor);
 				computedColor = _mm_mul_ps(negate,computedColor);
-				Pixel<>* pixel = new Pixel<>();
+				Pixel<> pixel;
 				ALIGN float tempColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f};
 				_mm_store_ps(tempColor,computedColor);
 				for(int i = 0; i < 3; ++i)
-					pixel->color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
-				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
+					pixel.color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
+				targets[currentTarget].GetBuffer()->PutPixel(std::forward<Pixel<>>(pixel),val,true);
 			}
 			else
 			{
