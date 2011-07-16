@@ -5,6 +5,7 @@
 #include "Pipeline.h"
 #include "PrimitiveBase.h"
 #include "Alignment.h"
+#include "FrameBuffer.h"
 #include <vector>
 
 template<typename DataType = Math::Vector4, unsigned short NumVertices = 3>
@@ -15,7 +16,7 @@ public:
 	{
 		if(incVertices)
 			AddVertices(incVertices);
-		pipeline = new Pipeline<>();
+	/*	pipeline = new Pipeline<>();*/
 	}
 
 	~Primitive(){}
@@ -68,22 +69,27 @@ private:
 	DataType modelSpaceVertices[NumVertices];
 	DataType vertices[NumVertices];
 	unsigned short currentNumberVertices;
-	PipelineBase* pipeline;
+	Pipeline<> pipeline;
 };
 
 
-template<typename DataType>
-class Primitive<DataType,3>: public PrimitiveBase
+template<>
+class Primitive<Math::Vector4,3>: public PrimitiveBase
 {
 public:
-	Primitive(DataType* incVertices = nullptr, DataType* incNormals = nullptr )	:	currentNumberVertices(0)
+	Primitive(Math::Vector4* incVertices = nullptr, Math::Vector4* incNormals = nullptr )	:	currentNumberVertices(0)
 	{
 		if(incVertices)
 			AddVertices(incVertices);
 		if(incNormals)
 			AddNormals(incNormals);
-		pipeline = new Pipeline<>();
 	}
+
+	/*Primitive(Math::Vector4&& incVertices[], Math::Vector4&& incNormals[] )	:	currentNumberVertices(0)
+	{
+		vertices = std::forward<Math::Vector4>(incVertices)
+		normals = std::forward<Math::Vector4>(incNormals)
+	}*/
 
 	~Primitive(){}
 
@@ -91,7 +97,7 @@ public:
 
 	void ExecutePipeline()
 	{
-		pipeline->Execute(this);
+		pipeline.Execute(this);
 	}
 
 	void TransformVertices(const Math::Matrix4X4 &transform)
@@ -113,9 +119,6 @@ public:
 
 		transformed = Math::Matrix4X4Multiply( transform, toTransformNormals, false );
 		Math::Transpose( transformed );
-		/*Math::ScaleForW( transformed.rows[0] );
-		Math::ScaleForW( transformed.rows[1] );
-		Math::ScaleForW( transformed.rows[2] );*/
 		
 		normals[0] = transformed.rows[0];
 		normals[1] = transformed.rows[1];
@@ -345,7 +348,7 @@ public:
 			output[2] = Math::zero;
 			return;
 		}
-		Math::Vector4 D[3],ABC,minusABC,edgeOne,edgeTwo;
+		Math::Vector4 D[3],minusABC,edgeOne,edgeTwo;
 		//Solving for D.  D = -Ax - By - Cz.  Reusing edgeTwo.
 		minusABC = edgeOne = _mm_sub_ps(Math::zero,interpolationCoef); //{ -A, -B, -C, 0 }
 		Math::Vector4 vertToUse = vert0;
@@ -404,7 +407,7 @@ public:
 #endif
 	}
 
-	void LEETest(FramebufferBase* buffer)
+	void LEETest(FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth> &buffer)
 	{
 		//Setup 
 		Math::Vector4 planeForZInterpolation;
@@ -473,7 +476,7 @@ public:
 		}
 	}
 
-	void WriteBuffer(FramebufferBase* buffer,const Math::Vector4 &zPlane,const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
+	void WriteBuffer(FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth> &buffer,const Math::Vector4 &zPlane,const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
 		Math::Vector4 toAssignToPixelBary = Math::zero,toAssignToPixel = Math::zero;
 		Math::Vector4 normalPlaneTemp[3]; //FUCKKKKKKK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -481,7 +484,8 @@ public:
 		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
 		//in triangle or on line of one triangle
-		Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();
+		/*Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();*/
+		Pixel<Math::Vector4,Depth,1> pixel;
 
 #if BARYCENTRIC
 		//Barycentric is more accurate but more expensive
@@ -513,7 +517,7 @@ public:
 		Math::Vector4 localZ;
 		Math::Vector4 originalCoords = Math::LoadVector4Aligned(loadCoords);
 		localZ = Math::Vec3DotVec3(originalCoords,zPlane);
-		_mm_store_ss(&pixel->z, localZ);
+		_mm_store_ss((float*)&pixel.z, localZ);
 
 		normalPlaneTemp[0] = Math::Vec3DotVec3(originalCoords,normalPlane[0]);
 		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[0],_MM_MK_INSERTPS_NDX(0,0,0));
@@ -523,37 +527,36 @@ public:
 		toAssignToPixel = _mm_insert_ps(toAssignToPixel,normalPlaneTemp[2],_MM_MK_INSERTPS_NDX(0,2,0));
 		Math::Normalize(toAssignToPixel);
 
-		pixel->PutData(std::forward<Math::Vector4 >(toAssignToPixel));
-		//pixel->PutData(toAssignToPixel);
-		buffer->PutPixel(pixel,(unsigned int) x, (unsigned int) y);
+		pixel.PutData(std::forward<Math::Vector4 >(toAssignToPixel));
+		buffer.PutPixel(std::forward<Pixel<Math::Vector4,Depth,1>>(pixel),(unsigned int) x, (unsigned int) y);
 	}
 
 
-	void AddVertices(DataType* incVertices)
+	void AddVertices(Math::Vector4* incVertices)
 	{
-		memcpy(modelSpaceVertices,incVertices,sizeof(DataType)*3);
+		memcpy(modelSpaceVertices,incVertices,sizeof(Math::Vector4)*3);
 		currentNumberVertices = 3;
 	}
 
-	void AddNormals(DataType* incNormals)
+	void AddNormals(Math::Vector4* incNormals)
 	{
-		memcpy(modelSpaceNormals,incNormals,sizeof(DataType)*3);
+		memcpy(modelSpaceNormals,incNormals,sizeof(Math::Vector4)*3);
 	}
 
-	void AddVertex(const DataType &vertex)
+	void AddVertex(const Math::Vector4 &vertex)
 	{
 		if(currentNumberVertices < 3)
 			vertices[currentNumberVertices++] = vertex;
 	}
 
 private:
-	DataType modelSpaceVertices[3];
-	DataType modelSpaceNormals[3];
-	DataType vertices[3];
-	DataType normals[3];
+	Math::Vector4 modelSpaceVertices[3];
+	Math::Vector4 modelSpaceNormals[3];
+	Math::Vector4 vertices[3];
+	Math::Vector4 normals[3];
 	Math::Vector4 interpolationCoef;
 	unsigned short currentNumberVertices;
-	PipelineBase* pipeline;
+	Pipeline<> pipeline;
 };
 
 #endif

@@ -30,7 +30,8 @@ template<typename ColorComponentDepth = Intensity, typename zDepth = Depth, type
 struct Pixel : PixelBase
 {
 	ALIGN ColorComponentDepth data[dataSize];
-	zDepth z;
+	volatile zDepth z;
+	
 	Pixel()
 	{
 		//data = new ColorComponentDepth[size];
@@ -75,7 +76,7 @@ template<>
 struct Pixel<Intensity,Depth,4> : PixelBase
 {
 	ALIGN Intensity color[4];
-	Depth z;
+	volatile Depth z;
 	Pixel()
 	{
 		

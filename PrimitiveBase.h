@@ -39,7 +39,7 @@ public:
 	
 	virtual void SortVertices() = 0;
 
-	virtual void LEETest(FramebufferBase* buffer) = 0;
+	virtual void LEETest(FramebufferBase* buffer) {}
 
 	virtual void GenerateBounds(const int* xOrder, const int* yOrder) = 0;
 

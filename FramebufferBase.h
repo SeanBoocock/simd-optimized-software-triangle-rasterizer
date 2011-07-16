@@ -10,7 +10,7 @@ public:
 	FramebufferBase(){}
 	virtual ~FramebufferBase(){}
 
-	virtual void PutPixel(PixelBase* pixel, unsigned int x, unsigned int y, bool directWrite = false) = 0;
+	/*virtual void PutPixel(PixelBase&& pixel, unsigned int x, unsigned int y, bool directWrite = false) = 0;*/
 	virtual const float GetWidth() = 0;
 	virtual const float GetHeight() = 0;
 	virtual char* FlushBuffer() = 0;

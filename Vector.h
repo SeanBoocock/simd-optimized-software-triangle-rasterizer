@@ -38,6 +38,10 @@ namespace Math
 	
 	extern Vector4 LoadVector4Aligned(const float* inArray);
 
+	extern Vector4 Floor(const Vector4 &vec);
+
+	extern void ModF(const Vector4 &vec, Vector4 &floorOut, Vector4 &fractionalOut);
+
 	ALIGN struct Vector4Constant 
 	{
 		union 

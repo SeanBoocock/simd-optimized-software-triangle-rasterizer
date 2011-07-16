@@ -11,12 +11,12 @@ public:
 	RenderTarget()	:	xDimension(DEFAULT_WIDTH),
 						yDimension(DEFAULT_HEIGHT)
 	{
-		buffer = (FramebufferBase*) new FrameBuffer<>();
+		/*buffer = new FrameBuffer<>();*/
 	}
 
 	const unsigned int GetColorDepth()
 	{
-		return buffer->GetColorDepth();
+		return buffer.GetColorDepth();
 	}
 
 	const float GetWidth() const
@@ -29,28 +29,28 @@ public:
 		return (float)yDimension;
 	}
 
-	FramebufferBase* GetBuffer()
+	FrameBuffer<>* GetBuffer()
 	{
-		return buffer;
+		return &buffer;
 	}
 
 	void PutPixel(){}
 
 	const char* FlushBuffer()
 	{
-		return buffer->FlushBuffer();
+		return buffer.FlushBuffer();
 	}
 
 	~RenderTarget()
 	{
-		delete buffer;
+
 	}
 
 private:
 	unsigned int xDimension;
 	unsigned int yDimension;
 	bool active;
-	FramebufferBase* buffer; //buffer
+	FrameBuffer<> buffer; //buffer
 };
 
 #endif

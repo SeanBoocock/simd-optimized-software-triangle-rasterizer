@@ -2,11 +2,11 @@
 #ifndef VERTEX_BUFFER_H_
 #define VERTEX_BUFFER_H_
 
-#include "Buffer.h"
+//#include "Buffer.h"
 #include "Primitive.h"
 #include "Alignment.h"
 
-class VertexBuffer : public Buffer
+class VertexBuffer 
 {
 public:
 	VertexBuffer(unsigned int size = 0)	:	buffer(nullptr),
@@ -15,25 +15,25 @@ public:
 	{
 		if(totalSize)
 		{
-			buffer = new PrimitiveBase*[totalSize];
+			buffer = new Primitive<>[totalSize];
 		}
 	}
 
 	~VertexBuffer()
 	{
-		if(buffer)
+		/*if(buffer)
 		{
 			for(unsigned int i = 0; i < totalSize; ++i)
 				delete buffer[i];
-		}
+		}*/
 		delete buffer;
 	}
 
 	ALIGNED_NEW
 
-	PrimitiveBase* At(unsigned int index)
+	Primitive<>* At(unsigned int index)
 	{
-		return (index < currentSize && buffer != nullptr && index >= 0) ? buffer[index] : nullptr;
+		return (index < currentSize && buffer != nullptr && index >= 0) ? &buffer[index] : nullptr;
 	}
 
 	const unsigned int Size() const
@@ -41,10 +41,10 @@ public:
 		return currentSize;
 	}
 
-	void PushBack(PrimitiveBase* toAdd)
+	void PushBack(Primitive<>&& toAdd)
 	{
 		if(currentSize < totalSize)
-			buffer[currentSize++] = toAdd;
+			buffer[currentSize++] = std::forward<Primitive<>>(toAdd);
 	}
 
 	void FillBuffer(PrimitiveBase** input, unsigned int numberOfElements)
@@ -53,7 +53,7 @@ public:
 		memcpy(buffer, input, currentSize * sizeof(PrimitiveBase));
 	}
 
-	PrimitiveBase** FetchBuffer(unsigned int &count)
+	Primitive<>* FetchBuffer(unsigned int &count)
 	{
 		count = currentSize;
 		return buffer;
@@ -67,7 +67,7 @@ public:
 private:
 	unsigned int totalSize;
 	unsigned int currentSize;
-	PrimitiveBase** buffer;
+	Primitive<>* buffer;
 };
 
 #endif

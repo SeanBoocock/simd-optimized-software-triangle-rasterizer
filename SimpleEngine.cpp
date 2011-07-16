@@ -28,7 +28,7 @@ void SimpleEngine::Initialize()
 	m.LoadMesh();
 	//m.LoadTestCube();
 
-	RENDERER->SubmitVertexBuffer(m.GetBuffer());
+	RENDERER->SubmitVertexBuffer(&m.GetBuffer());
 }
 
 void SimpleEngine::Run()

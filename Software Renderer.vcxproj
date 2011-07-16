@@ -141,6 +141,7 @@
     <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="SimpleEngine.h" />
     <ClInclude Include="Singleton.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="Vector.h" />
