@@ -5,7 +5,21 @@
 //#include "Texture.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
+#include "tbb/tbb.h"
 
+class ExecutePrimitives
+{
+	VertexBuffer * const buffer;
+public:
+	void operator () (const tbb::blocked_range<size_t>& r) const
+	{
+		VertexBuffer* localBuffer = buffer;
+		for(size_t i = r.begin(); i != r.end(); ++i)
+			localBuffer->At(i)->ExecutePipeline();
+	}
+	ExecutePrimitives( VertexBuffer* buf) : buffer(buf)
+	{}
+};
 
 Renderer::Renderer()	:	camera(nullptr),
 							numTargets(2),
@@ -39,7 +53,7 @@ Renderer::Renderer()	:	camera(nullptr),
 	ambientLight.lightColor = Math::LoadVector4Aligned(lightTemp4);
 
 	//power is 32, taking log2(power)
-	specularPower = log(32.0f)/log(2.0f); // log base converion to base 2
+	specularPower = (int) log(32.0f)/log(2.0f); // log base converion to base 2
 
 	ALIGN float specCoef[4] = {0.3f, 0.3f, 0.3f, 0.0f};
 	specCoefficient = Math::LoadVector4Aligned(specCoef);
@@ -58,7 +72,8 @@ Renderer::~Renderer()
 {
 	/*for(unsigned int i = 0; i < numTargets; ++i)
 		delete targets[i];*/
-	delete targets;
+	delete [] targets;
+	delete camera;
 	/*if(gBuffers)	delete [] gBuffers;*/
 }
 
@@ -97,10 +112,12 @@ RenderTarget* Renderer::Draw()
 		vertexBuffer->At(primitive)->ExecutePipeline();
 	}*/
 
-	tbb::parallel_for(0,(int)vertexBuffer->Size(),[&](int primitive)
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, vertexBuffer->Size(), 50), ExecutePrimitives(vertexBuffer), tbb::simple_partitioner() );
+
+	/*tbb::parallel_for(0,iterations,[&](int primitive)
 	{
 		vertexBuffer->At(primitive)->ExecutePipeline();
-	});
+	});*/
 
 	//after all meshes drawn, do shading for all pixels drawn in depth buffer
 	result |= Shader();
@@ -205,25 +222,24 @@ unsigned int Renderer::Shader()
 	DEBUG_PRINT("Renderer executing Shader().\n");
 	/*FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>* localBuf = static_cast<FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth>*>(gBuffers[0]);
 */
-	Pixel<Math::Vector4,Depth,1> currentNormal;
+	
 
-	unsigned int xDim = gBuffers[0].GetWidth();
-	unsigned int yDim = gBuffers[0].GetHeight();
-
-	Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor,temp,temp2;
+	unsigned int xDim = (unsigned int)gBuffers[0].GetWidth();
+	unsigned int yDim = (unsigned int)gBuffers[0].GetHeight();
 
 	Math::Vector4 texture = Math::ident;
-
-	unsigned short skipped = 0;
-	for(unsigned int val = 0; val < xDim*yDim; ++val)
-	/*tbb::parallel_for(0,(int)(xDim*yDim),[&](int val)*/
+	
+	/*for(unsigned int val = 0; val < xDim*yDim; ++val)*/
+	tbb::parallel_for(0,(int)(xDim*yDim),[=](int val)
 	{
 		if(gBuffers[0].GetPixel(val).IsWrittenTo()) //Pixel was updated during last frame
 		{
+			Pixel<Math::Vector4,Depth,1> currentNormal;
+			unsigned short skipped = 0;
+			Math::Vector4 nDotL,nDotE,origNormal,normal,reflection,rDotE,computedColor,temp,temp2;
 			currentNormal = gBuffers[0].GetPixel(val);
 			origNormal = currentNormal.data[0];
 			computedColor = Math::zero;
-			skipped = 0;
 
 			for(int i = 0; i < numLights; ++i) // 2 = num lights for now
 			{
@@ -290,16 +306,16 @@ unsigned int Renderer::Shader()
 					pixel.color[i] = (tempColor[i] < 0) ? 0 : ( tempColor[i] > 255 ? 255 : (Intensity)((long)tempColor[i]) );
 				targets[currentTarget].GetBuffer()->PutPixel(std::forward<Pixel<>>(pixel),val,true);
 			}
-			else
+			/*else
 			{
-				/*Pixel<>* pixel = new Pixel<>();
+				Pixel<>* pixel = new Pixel<>();
 				unsigned short TESTING[4] = { 255, 0, 0, 0 };
 				for(int i = 0; i < 3; ++i)
 					pixel->color[i]=TESTING[i];
-				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);*/
-			}
+				targets[currentTarget]->GetBuffer()->PutPixel(pixel,val,true);
+			}*/
 		}// if(localBuf->GetPixel(val)->IsWrittenTo()
-	}// for(unsigned int val = 0; val < xDim*yDim; ++val)
+	});// for(unsigned int val = 0; val < xDim*yDim; ++val)
 	
 	return RENDERER_SUCCESS;
 }

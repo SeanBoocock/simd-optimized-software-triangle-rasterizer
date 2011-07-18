@@ -103,26 +103,26 @@ public:
 	void TransformVertices(const Math::Matrix4X4 &transform)
 	{
 		++trianglesStarted;
+		Math::Matrix4X4 toTransform,toTransformNormals,transformed;
+		Math::LoadMatrix(modelSpaceVertices[0],modelSpaceVertices[1],modelSpaceVertices[2],Math::ident0,toTransform);
+		Math::LoadMatrix(modelSpaceNormals[0],modelSpaceNormals[1],modelSpaceNormals[2],Math::ident0,toTransformNormals);
 
-		Math::Matrix4X4 toTransform = Math::Matrix4X4(modelSpaceVertices[0],modelSpaceVertices[1],modelSpaceVertices[2],Math::ident0);
-		Math::Matrix4X4 toTransformNormals = Math::Matrix4X4(modelSpaceNormals[0],modelSpaceNormals[1],modelSpaceNormals[2],Math::ident0);
-		//
-		Math::Matrix4X4 transformed = Math::Matrix4X4Multiply( transform, toTransform, false );
+		Math::Matrix4X4Multiply( transform, toTransform, transformed, false );
 		Math::Transpose( transformed );
-		Math::ScaleForW( transformed.rows[0] );
-		Math::ScaleForW( transformed.rows[1] );
-		Math::ScaleForW( transformed.rows[2] );
+		Math::ScaleForW( transformed[0] );
+		Math::ScaleForW( transformed[1] );
+		Math::ScaleForW( transformed[2] );
 		
-		vertices[0] = transformed.rows[0];
-		vertices[1] = transformed.rows[1];
-		vertices[2] = transformed.rows[2];
+		vertices[0] = transformed[0];
+		vertices[1] = transformed[1];
+		vertices[2] = transformed[2];
 
-		transformed = Math::Matrix4X4Multiply( transform, toTransformNormals, false );
+		Math::Matrix4X4Multiply( transform, toTransformNormals, transformed, false );
 		Math::Transpose( transformed );
 		
-		normals[0] = transformed.rows[0];
-		normals[1] = transformed.rows[1];
-		normals[2] = transformed.rows[2];
+		normals[0] = transformed[0];
+		normals[1] = transformed[1];
+		normals[2] = transformed[2];
 		Math::Normalize(normals[0]);
 		Math::Normalize(normals[1]);
 		Math::Normalize(normals[2]);

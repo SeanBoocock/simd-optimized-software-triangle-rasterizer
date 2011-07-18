@@ -41,4 +41,37 @@ inline bool InterlockedZBufferExchange(
     return true;
 }
 
+template<typename ColorComponentDepth, typename zDepth, typename int dataSize>
+inline bool InterlockedZExchange(
+    __inout  volatile Pixel<ColorComponentDepth,zDepth,dataSize>* pixelInBuffer,
+    __in     Pixel<ColorComponentDepth,zDepth,dataSize>* pixelToCompare	
+    )
+{
+	volatile LONG* zInBuffer = (volatile LONG*)(&pixelInBuffer->z);
+    LONG prevValue, prevCopy, zToExchange;
+    
+    prevValue = *zInBuffer ;
+    zToExchange = pixelToCompare->z;
+    do {
+        if ( pixelToCompare->z >= pixelInBuffer->z ) {
+            return false;
+        }
+    
+        prevCopy = prevValue;
+    
+        //
+        // prevValue will be the value that used to be Target if the exchange was made
+        // or its current value if the exchange was not made.
+        //
+        prevValue = InterlockedCompareExchange(zInBuffer, zToExchange, prevValue);
+    
+        //
+        // If prevCopy == prevValue, then no one updated Target in between the deref at the top
+        // and the InterlockecCompareExchange afterward and we are done
+        //
+    } while (prevCopy != prevValue);
+    
+    return true;
+}
+
 #endif

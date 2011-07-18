@@ -12,13 +12,21 @@
 typedef float   GzCoord[3];
 typedef float	GzTextureIndex[2];
 
+#define teapot
+#ifdef teapot
+#define BUFFER_SIZE 1000
+#else
+#define BUFFER_SIZE 100000
+#endif
+
 class Mesh
 {
 public:
-	Mesh()	:	initialized(false),
-				buffer(1000)
+	Mesh(const char* fileName = nullptr)	:	initialized(false),
+												buffer(BUFFER_SIZE)
+									
 	{
-		if( (inFile  = fopen( INFILE3 , "r" )) == NULL )
+		if( fopen_s( &inFile, (fileName) ? fileName : INFILE3 , "r" ) == NULL )
 		{
 			DEBUG_PRINT( "The input file was not opened\n" );
 		}
@@ -248,6 +256,38 @@ public:
 
 	void LoadMesh()
 	{
+#if dragon
+		ALIGN float	vertexList[214236][4];
+		ALIGN float	normalList[214236][4];
+		
+		fscanf(inFile, "%f", &(vertexList[0][0]));
+	
+		for(int i = 0; i < 214236 ; ++i)
+		{
+			fscanf_s(inFile, "%f %f %f",&(vertexList[i][0]),&(vertexList[i][1]),&(vertexList[i][2]));
+			vertexList[i][3]=1.0f;
+		}
+		
+		fscanf(inFile, "%s", dummy);
+
+		for(int i = 0; i < 214236 ; ++i)
+		{
+			fscanf_s(inFile, "%f %f %f",&(normalList[i][0]),&(normalList[i][1]),&(normalList[i][2]));
+			normalList[i][3]=0.0f;
+
+			Math::Vector4 rowsVerts[3],rowsNormals[3];
+			rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[i]);
+			rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[i+1]);
+			rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[i+2]);
+
+			rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[i]);
+			rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[i+1]);
+			rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[i+2]);
+			Primitive<> toAdd(rowsVerts,rowsNormals);
+			buffer.PushBack(std::forward<Primitive<>>(toAdd));
+		}
+#endif
+#if teapot		
 		ALIGN float	vertexList[3][4];	/* vertex position coordinates */ 
 		ALIGN float	normalList[3][4];	/* vertex normals */ 
 		GzTextureIndex  	uvList[3];
@@ -262,19 +302,20 @@ public:
 
 		while( fscanf(inFile, "%s", dummy) == 1) 
 		{ 	
-			fscanf(inFile, "%f %f %f %f %f %f %f %f", 
+			
+			fscanf_s(inFile, "%f %f %f %f %f %f %f %f", 
 			&(vertexList[0][0]), &(vertexList[0][1]),  
 			&(vertexList[0][2]), 
 			&(normalList[0][0]), &(normalList[0][1]), 	
 			&(normalList[0][2]), 
 			&(uvList[0][0]), &(uvList[0][1]) ); 
-			fscanf(inFile, "%f %f %f %f %f %f %f %f", 
+			fscanf_s(inFile, "%f %f %f %f %f %f %f %f", 
 			&(vertexList[1][0]), &(vertexList[1][1]), 	
 			&(vertexList[1][2]), 
 			&(normalList[1][0]), &(normalList[1][1]), 	
 			&(normalList[1][2]), 
 			&(uvList[1][0]), &(uvList[1][1]) ); 
-			fscanf(inFile, "%f %f %f %f %f %f %f %f", 
+			fscanf_s(inFile, "%f %f %f %f %f %f %f %f", 
 			&(vertexList[2][0]), &(vertexList[2][1]), 	
 			&(vertexList[2][2]), 
 			&(normalList[2][0]), &(normalList[2][1]), 	
@@ -292,30 +333,6 @@ public:
 			Primitive<> toAdd(rowsVerts,rowsNormals);
 			buffer.PushBack(std::forward<Primitive<>>(toAdd));
 		}
-#if testing
-		Math::Vector4 rowsVerts[3],rowsNormals[3];
-		vertexList[0][0] = 0.0f; vertexList[0][1] = 0.0f; vertexList[0][2] = 0.75f;
-		vertexList[1][0] = 0.0f; vertexList[1][1] = 1.0f; vertexList[1][2] = 0.75f; 
-		vertexList[2][0] = 1.0f; vertexList[2][1] = 0.0f; vertexList[2][2] = 0.75f; 
-		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
-		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
-		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
-
-		rowsNormals[0] = Math::ident1;
-		rowsNormals[1] = Math::ident1;
-		rowsNormals[2] = Math::ident1;
-		PrimitiveBase* toAdd = new Primitive<>(rowsVerts,rowsNormals);
-		buffer->PushBack(toAdd);
-
-		vertexList[0][0] = 0.0f; vertexList[0][1] = 0.0f; vertexList[0][2] = 1.0f;
-		vertexList[1][0] = 0.0f; vertexList[1][1] = 1.0f; vertexList[1][2] = 0.5f; 
-		vertexList[2][0] = 1.0f; vertexList[2][1] = 0.0f; vertexList[2][2] = 0.5f; 
-		rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[0]);
-		rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[1]);
-		rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[2]);
-
-		toAdd = new Primitive<>(rowsVerts,rowsNormals);
-		buffer->PushBack(toAdd);
 #endif
 	}
 

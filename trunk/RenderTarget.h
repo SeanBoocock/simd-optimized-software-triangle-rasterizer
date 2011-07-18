@@ -14,7 +14,7 @@ public:
 		/*buffer = new FrameBuffer<>();*/
 	}
 
-	const unsigned int GetColorDepth()
+	unsigned int GetColorDepth()
 	{
 		return buffer.GetColorDepth();
 	}
@@ -36,7 +36,7 @@ public:
 
 	void PutPixel(){}
 
-	const char* FlushBuffer()
+	char* FlushBuffer()
 	{
 		return buffer.FlushBuffer();
 	}

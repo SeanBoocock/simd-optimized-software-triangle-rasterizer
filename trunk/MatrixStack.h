@@ -26,7 +26,23 @@ public:
 
 	void Push(Matrix4X4 &incMat)
 	{
-		stack[stackPointer++] = (stackPointer) ? Matrix4X4Multiply( stack[stackPointer-1], incMat ) : ( below ? Matrix4X4Multiply( below->Top(), incMat ) : incMat );
+		if(stackPointer)
+		{
+			Matrix4X4Multiply( stack[stackPointer-1], incMat, stack[stackPointer]);
+		}
+		else
+		{
+			if(below)
+				Matrix4X4Multiply( below->Top(), incMat, stack[stackPointer] );
+			else
+			{
+				stack[0][0] = incMat[0];
+				stack[0][1] = incMat[1];
+				stack[0][2] = incMat[2];
+				stack[0][3] = incMat[3];
+			}
+		}
+		++stackPointer;
 		stackDescription = (Enum)(stackDescription + 1);
 	}
 
