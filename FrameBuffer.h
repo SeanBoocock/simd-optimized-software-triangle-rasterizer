@@ -10,7 +10,7 @@
 #include "Pixel.h"
 #include "Debugging.h"
 #include "InterlockedZBufferExchange.h"
-
+#include "tbb/parallel_for.h"
 
 template<typename BufferOf = Pixel<Intensity,Depth>, typename ColorComponentDepth = Intensity, typename zDepth = Depth>
 class FrameBuffer	:	public FramebufferBase
@@ -54,21 +54,20 @@ public:
 			return;
 		}
 		
-		/*BufferOf* oldVal = buffer[ y * xDim + x ];*/
-		if(pixel.z < buffer[ y * xDim + x ].z)
+		//if(pixel.z < buffer[ y * xDim + x ].z)
+		//{
+		//	AcquireSRWLockExclusive(&zLock);
+		//	if(pixel.z < buffer[ y * xDim + x ].z)
+		//	{
+		//		/*delete oldVal;*/
+		//		buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
+		//	}
+		//	ReleaseSRWLockExclusive(&zLock);
+		//}
+		if( InterlockedZExchange(&buffer[ y * xDim + x ],&pixel) )
 		{
-			AcquireSRWLockExclusive(&zLock);
-			if(pixel.z < buffer[ y * xDim + x ].z)
-			{
-				/*delete oldVal;*/
-				buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
-			}
-			ReleaseSRWLockExclusive(&zLock);
+			buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 		}
-		/*if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(BufferOf*)pixel) )
-		{
-			delete oldVal;
-		}*/
 	}
 
 	void PutPixel(BufferOf&& pixel, unsigned int val, bool directWrite = false)
@@ -80,15 +79,20 @@ public:
 			return;
 		}
 		
-		if(pixel.z < buffer[ val ].z)
+		//if(pixel.z < buffer[ val ].z)
+		//{
+		//	AcquireSRWLockExclusive(&zLock);
+		//	if(pixel.z < buffer[ val ].z)
+		//	{
+		//		/*delete oldVal;*/
+		//		buffer[ val ] = std::forward<BufferOf>(pixel);
+		//	}
+		//	ReleaseSRWLockExclusive(&zLock);
+		//}
+
+		if( InterlockedZExchange(&buffer[ y * xDim + x ],&pixel) )
 		{
-			AcquireSRWLockExclusive(&zLock);
-			if(pixel.z < buffer[ val ].z)
-			{
-				/*delete oldVal;*/
-				buffer[ val ] = std::forward<BufferOf>(pixel);
-			}
-			ReleaseSRWLockExclusive(&zLock);
+			buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 		}
 
 	/*	BufferOf* oldVal = buffer[ val ];
@@ -121,8 +125,11 @@ public:
 
 	void Reset()
 	{
-		for(unsigned int i = 0; i < bufferSize; ++i)
+		/*for(unsigned int i = 0; i < bufferSize; ++i)*/
+		tbb::parallel_for(0,(int)bufferSize,[&](int i)
+		{
 			buffer[i].Reset();
+		});
 	}
 
 	void Resize(int xDim, int yDim)
@@ -181,15 +188,20 @@ public:
 			return;
 		}
 
-		if(pixel.z < buffer[ y * xDim + x ].z)
+		//if(pixel.z < buffer[ y * xDim + x ].z)
+		//{
+		//	AcquireSRWLockExclusive(&zLock);
+		//	if(pixel.z < buffer[ y * xDim + x ].z)
+		//	{
+		//		/*delete oldVal;*/
+		//		buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
+		//	}
+		//	ReleaseSRWLockExclusive(&zLock);
+		//}
+
+		if( InterlockedZExchange(&buffer[ y * xDim + x ],&pixel) )
 		{
-			AcquireSRWLockExclusive(&zLock);
-			if(pixel.z < buffer[ y * xDim + x ].z)
-			{
-				/*delete oldVal;*/
-				buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
-			}
-			ReleaseSRWLockExclusive(&zLock);
+			buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 		}
 
 		//if( buffer[ y * xDim + x ] )
@@ -211,16 +223,22 @@ public:
 			buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 			return;
 		}
-		if(pixel.z < buffer[ val ].z)
+
+		if( InterlockedZExchange(&buffer[ val ],&pixel) )
 		{
-			AcquireSRWLockExclusive(&zLock);
-			if(pixel.z < buffer[ val ].z)
-			{
-				/*delete oldVal;*/
-				buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
-			}
-			ReleaseSRWLockExclusive(&zLock);
+			buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 		}
+
+		//if(pixel.z < buffer[ val ].z)
+		//{
+		//	AcquireSRWLockExclusive(&zLock);
+		//	if(pixel.z < buffer[ val ].z)
+		//	{
+		//		/*delete oldVal;*/
+		//		buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
+		//	}
+		//	ReleaseSRWLockExclusive(&zLock);
+		//}
 
 		/*if( buffer[ val ] )
 		{

@@ -11,7 +11,8 @@
 #include "tbb/task_scheduler_init.h"
 
 
-SimpleEngine::SimpleEngine()	:	win(nullptr)
+SimpleEngine::SimpleEngine()	:	win(nullptr),
+									m("pot4.asc")
 {
 	DEBUG_PRINT("SimpleEngine constructed.\n");
 }
@@ -21,7 +22,7 @@ SimpleEngine::~SimpleEngine()
 
 void SimpleEngine::Initialize()
 {
-	tbb::task_scheduler_init init(4);
+	tbb::task_scheduler_init init;
 	win = new Window();
 	win->Initialize();
 

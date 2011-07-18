@@ -10,7 +10,7 @@
 #include "Alignment.h"
 
 static const Math::Vector4Constant cameraUp = { 0.0f, 1.0f, 0.0f, 1.0f };
-static const Math::Vector4Constant cameraDefaultPosition = { -5.0f, 2.0f, 5.0f, 1.0f };
+static const Math::Vector4Constant cameraDefaultPosition = { 0.0f, 370.0f, 2300.0f, 1.0f };
 
 enum DirtyBits : unsigned short
 {
@@ -37,7 +37,8 @@ enum CameraMatrices : unsigned short
 #define DEFAULT_FOV_DEGREES 45
 #define DEFAULT_FOV DEFAULT_FOV_DEGREES*PI/180.0f
 #define DEFAULT_NEAR_PLANE .01f
-#define DEFAULT_FAR_PLANE 20.0f
+#define DEFAULT_FAR_PLANE 3000.0f
+
 
 using namespace Math;
 
@@ -158,28 +159,35 @@ public:
 
 		if(replaceOnStack)
 			cameraStack->Pop();
-		cameraStack->Push( Math::Matrix4X4( screenMatrix ) );
+		Matrix4X4 screenMat;
+		LoadMatrix_A(screenMatrix,screenMat);
+		cameraStack->Push( screenMat );
 	}
 
 	void ComputePerspectiveMatrix(bool replaceOnStack = false)
 	{
 		ALIGN float perspectiveCorrectionRow[4] = { 0.0f, 0.0f, tan( fov / 2 ), 1.0f };
-		Vector4 castedRow = Math::LoadVector4Aligned( perspectiveCorrectionRow );
+		Math::Matrix4X4 perspMat;
+		perspMat[3] = Math::LoadVector4Aligned( perspectiveCorrectionRow );
+		perspMat[0] = ident3;
+		perspMat[1] = ident2;
+		perspMat[2] = ident1;
 		//Generate matrix
 		if(replaceOnStack)
 			cameraStack->Pop();
-		cameraStack->Push( Math::Matrix4X4( ident3, ident2, ident1, castedRow ) );
+
+		cameraStack->Push( perspMat );
 	}
 
 	void ComputeProjectionMatrix(bool replaceOnStack = false)
 	{
 		//Calculate Z-Basis vector for camera projection matrix
 		Vector4 zBasis = lookAt - position;
-		Math::Normalize(zBasis);
+		Normalize(zBasis);
 		
 		//Calculate Y-Basis vector for camera projection matrix
 		Vector4 yBasis = up - ( Math::Vec3DotVec3(up,zBasis) ) * zBasis;
-		Math::Normalize(yBasis);
+		Normalize(yBasis);
 
 		//Calculate X-Basis vector for camera projection matrix
 		Vector4 xBasis = Math::Vec3CrossVec3(yBasis,zBasis);
@@ -199,7 +207,11 @@ public:
 		//Generate matrix
 		if(replaceOnStack)
 			cameraStack->Pop();
-		cameraStack->Push( Math::Matrix4X4( xBasis, yBasis, zBasis, ident0 ) );
+		
+		Matrix4X4 mat;
+		Math::LoadMatrix( xBasis, yBasis, zBasis, ident0, mat );
+
+		cameraStack->Push( mat );
 	}
 
 

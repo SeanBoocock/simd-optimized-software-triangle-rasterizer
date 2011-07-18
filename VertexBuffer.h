@@ -26,7 +26,7 @@ public:
 			for(unsigned int i = 0; i < totalSize; ++i)
 				delete buffer[i];
 		}*/
-		delete buffer;
+		delete [] buffer;
 	}
 
 	ALIGNED_NEW
