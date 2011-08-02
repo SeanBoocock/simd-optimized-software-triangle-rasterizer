@@ -11,14 +11,9 @@
 #include "RenderTarget.h"
 #include "ErrorHandling.h"
 #include "Camera.h"
-
 #include "MatrixStack.h"
 
-
 class VertexBuffer;
-//class MatrixStackBase;
-//class Camera;
-//class RenderTarget;
 
 #define numLights 3
 #define NUMBER_G_BUFFERS 1

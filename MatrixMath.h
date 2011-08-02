@@ -28,23 +28,6 @@ namespace Math
 {
 	typedef Vector4 Matrix4X4[4];
 	
-	/*ALIGN struct Matrix4X4
-	{
-		Vector4 rows[4];
-	
-		Matrix4X4();
-		Matrix4X4(const float alignedMatrix[4][4]);
-
-		Matrix4X4(	const Vector4 &row0,
-					const Vector4 &row1,
-					const Vector4 &row2,
-					const Vector4 &row3	);
-
-		void Load(float* unalignedMatrix);
-		void Load(float** unalignedMatrix);
-		void Load(const float alignedMatrix[4][4]);
-	};*/
-
 	extern void LoadMatrix_A(const float alignedMatrix[4][4], Matrix4X4 &outMat);
 
 	extern void LoadMatrix(	const Vector4 &row0,

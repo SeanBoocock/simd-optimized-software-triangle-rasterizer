@@ -12,7 +12,7 @@
 
 
 SimpleEngine::SimpleEngine()	:	win(nullptr),
-									m("pot4.asc")
+									m("../models/Cart_A(w_fixedTangents).cprt")
 {
 	DEBUG_PRINT("SimpleEngine constructed.\n");
 }
@@ -27,7 +27,6 @@ void SimpleEngine::Initialize()
 	win->Initialize();
 
 	m.LoadMesh();
-	//m.LoadTestCube();
 
 	RENDERER->SubmitVertexBuffer(&m.GetBuffer());
 }
