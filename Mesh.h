@@ -12,7 +12,7 @@
 typedef float   GzCoord[3];
 typedef float	GzTextureIndex[2];
 
-#define cart
+#define teapot
 #ifdef teapot
 #define BUFFER_SIZE 1000
 #else
@@ -301,6 +301,39 @@ public:
 		fscanf(inFile, "%s", dummy);
 
 		for(int i = 0; i < 13500 ; ++i)
+		{
+			fscanf_s(inFile, "%f %f %f",&(normalList[i][0]),&(normalList[i][1]),&(normalList[i][2]));
+			normalList[i][3]=0.0f;
+
+			Math::Vector4 rowsVerts[3],rowsNormals[3];
+			rowsVerts[0] = Math::LoadVector4Aligned((float*)&vertexList[i]);
+			rowsVerts[1] = Math::LoadVector4Aligned((float*)&vertexList[i+1]);
+			rowsVerts[2] = Math::LoadVector4Aligned((float*)&vertexList[i+2]);
+
+			rowsNormals[0] = Math::LoadVector4Aligned((float*)&normalList[i]);
+			rowsNormals[1] = Math::LoadVector4Aligned((float*)&normalList[i+1]);
+			rowsNormals[2] = Math::LoadVector4Aligned((float*)&normalList[i+2]);
+			Primitive<> toAdd(rowsVerts,rowsNormals);
+			buffer.PushBack(std::forward<Primitive<>>(toAdd));
+		}
+
+#endif
+#ifdef soldier
+		
+		ALIGN float	vertexList[202563][4];
+		ALIGN float	normalList[202563][4];
+		
+		fscanf(inFile, "%f", &(vertexList[0][0]));
+
+		for(int i = 0; i < 202563 ; ++i)
+		{
+			fscanf_s(inFile, "%f %f %f",&(vertexList[i][0]),&(vertexList[i][1]),&(vertexList[i][2]));
+			vertexList[i][3]=1.0f;
+		}
+		
+		fscanf(inFile, "%s", dummy);
+
+		for(int i = 0; i < 202563 ; ++i)
 		{
 			fscanf_s(inFile, "%f %f %f",&(normalList[i][0]),&(normalList[i][1]),&(normalList[i][2]));
 			normalList[i][3]=0.0f;
