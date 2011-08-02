@@ -10,7 +10,7 @@
 #include "Alignment.h"
 
 static const Math::Vector4Constant cameraUp = { 0.0f, 1.0f, 0.0f, 1.0f };
-static const Math::Vector4Constant cameraDefaultPosition = { 0.0f, 0.0f, 5.0f, 1.0f };
+static const Math::Vector4Constant cameraDefaultPosition = { 0.0f, 2.4f, 10.0f, 1.0f };
 
 enum DirtyBits : unsigned short
 {
@@ -37,7 +37,7 @@ enum CameraMatrices : unsigned short
 #define DEFAULT_FOV_DEGREES 45
 #define DEFAULT_FOV DEFAULT_FOV_DEGREES*PI/180.0f
 #define DEFAULT_NEAR_PLANE .01f
-#define DEFAULT_FAR_PLANE 100.0f
+#define DEFAULT_FAR_PLANE 200.0f
 
 
 using namespace Math;

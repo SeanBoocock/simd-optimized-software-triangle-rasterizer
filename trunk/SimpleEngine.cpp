@@ -12,7 +12,7 @@
 
 
 SimpleEngine::SimpleEngine()	:	win(nullptr),
-									m("../models/Cart_A(w_fixedTangents).cprt")
+									m("../models/pot4.asc")
 {
 	DEBUG_PRINT("SimpleEngine constructed.\n");
 }
