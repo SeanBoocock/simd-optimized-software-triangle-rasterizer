@@ -37,7 +37,7 @@ Renderer::Renderer()	:	camera(nullptr),
 	//TEMPORARY-SHADER/LIGHTS
 	ALIGN float lightTemp[4] = {-0.7071f, 0.7071f, 0.0f, 0.0f};
 	lights[0].lightDir = Math::LoadVector4Aligned(lightTemp);//directions
-	ALIGN float lightTemp1[4] = {0.5f, 0.5f, 0.9f, 0.0f};
+	ALIGN float lightTemp1[4] = {0.9f, 0.5f, 0.9f, 0.0f};
 	lights[0].lightColor = Math::LoadVector4Aligned(lightTemp1);
 	ALIGN float lightTemp2[4] = {0.0f, -0.7071f, -0.7071f, 0.0f};
 	lights[1].lightDir = Math::LoadVector4Aligned(lightTemp2);//directions
@@ -49,7 +49,7 @@ Renderer::Renderer()	:	camera(nullptr),
 	lights[2].lightColor = Math::LoadVector4Aligned(lightTemp5);//directions
 
 	ambientLight.lightDir = Math::zero; //color value
-	ALIGN float lightTemp6[4] = {0.3f, 0.3f, 0.3f, 0.0f};
+	ALIGN float lightTemp6[4] = {0.4f, 0.6f, 0.6f, 0.0f};
 	ambientLight.lightColor = Math::LoadVector4Aligned(lightTemp4);
 
 	//power is 32, taking log2(power)
@@ -70,11 +70,8 @@ Renderer::Renderer()	:	camera(nullptr),
 
 Renderer::~Renderer()
 {
-	/*for(unsigned int i = 0; i < numTargets; ++i)
-		delete targets[i];*/
 	delete [] targets;
 	delete camera;
-	/*if(gBuffers)	delete [] gBuffers;*/
 }
 
 HRESULT Renderer::Initialize()

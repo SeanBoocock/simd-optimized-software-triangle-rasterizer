@@ -23,8 +23,6 @@ public:
 	{
 		buffer = new BufferOf[bufferSize = xDim * yDim];
 		InitializeSRWLock(&zLock);
-		/*for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i] = new BufferOf();*/
 	}
 
 	~FrameBuffer()
@@ -49,7 +47,6 @@ public:
 	{
 		if(directWrite)
 		{
-			/*delete buffer[ y * xDim + x ];*/
 			buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 			return;
 		}
@@ -94,13 +91,6 @@ public:
 		{
 			buffer[ y * xDim + x ] = std::forward<BufferOf>(pixel);
 		}
-
-	/*	BufferOf* oldVal = buffer[ val ];
-
-		if( InterlockedZBufferExchange(&buffer[ val ],(BufferOf*)pixel) )
-		{
-			delete oldVal;
-		}*/
 	}
 
 	const BufferOf GetPixel(unsigned int x, unsigned int y)
@@ -125,7 +115,6 @@ public:
 
 	void Reset()
 	{
-		/*for(unsigned int i = 0; i < bufferSize; ++i)*/
 		tbb::parallel_for(0,(int)bufferSize,[&](int i)
 		{
 			buffer[i].Reset();
@@ -156,8 +145,6 @@ public:
 																bufferToDisplay(nullptr)
 	{
 		buffer = new Pixel<Intensity,Depth>[bufferSize = xDim * yDim];
-		/*for(unsigned int i = 0; i < bufferSize; ++i)
-			buffer[i] = new Pixel<Intensity,Depth>();*/
 		InitializeSRWLock(&zLock);
 	}
 
@@ -203,23 +190,12 @@ public:
 		{
 			buffer[ y * xDim + x ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 		}
-
-		//if( buffer[ y * xDim + x ] )
-		//{
-		//	/*Pixel<Intensity,Depth,4>* oldVal = buffer[ y * xDim + x ];*/
-
-		//	if( InterlockedZBufferExchange(&buffer[ y * xDim + x ],(Pixel<Intensity,Depth,4>*)pixel) )
-		//	{
-		//		/*delete oldVal;*/
-		//	}
-		//}
 	}
 
 	void PutPixel(Pixel<Intensity,Depth>&& pixel, unsigned int val, bool directWrite = false)
 	{
 		if(directWrite)
 		{
-			/*delete buffer[ val ];*/
 			buffer[ val ] = std::forward<Pixel<Intensity,Depth>>(pixel);
 			return;
 		}
@@ -240,15 +216,6 @@ public:
 		//	ReleaseSRWLockExclusive(&zLock);
 		//}
 
-		/*if( buffer[ val ] )
-		{
-			Pixel<Intensity,Depth,4>* oldVal = buffer[ val ];
-
-			if( InterlockedZBufferExchange(&buffer[ val ],(Pixel<Intensity,Depth,4>*)pixel) )
-			{
-				delete oldVal;
-			}
-		}*/
 	}
 
 	//PARALLEL: can use parallel for here ot do this
