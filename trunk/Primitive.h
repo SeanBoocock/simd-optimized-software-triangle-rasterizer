@@ -1,4 +1,3 @@
-
 #ifndef PRIMITIVE_H_
 #define PRIMITIVE_H_
 
@@ -479,10 +478,7 @@ public:
 	void WriteBuffer(FrameBuffer<Pixel<Math::Vector4,Depth,1>, Math::Vector4, Depth> &buffer,const Math::Vector4 &zPlane,const Math::Vector4 normalPlane[], const unsigned int &x, const unsigned int &y)
 	{
 		Math::Vector4 toAssignToPixelBary = Math::zero,toAssignToPixel = Math::zero;
-		Math::Vector4 normalPlaneTemp[3]; //FUCKKKKKKK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
+		Math::Vector4 normalPlaneTemp[3]; 		
 		//in triangle or on line of one triangle
 		/*Pixel<Math::Vector4,Depth,1>* pixel = new Pixel<Math::Vector4,Depth,1>();*/
 		Pixel<Math::Vector4,Depth,1> pixel;
