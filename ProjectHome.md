@@ -1,0 +1,1 @@
+A CPU-based, SIMD-optimized, multi-threaded rasterizer/renderer
